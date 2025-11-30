@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+	provider = "prisma-client-js"
+}
+
+datasource db {
+	provider = "postgresql"
+	url      = env("DATABASE_URL")
+}
+
+model users {
+	discord_id   String        @id
+	nk_accounts  nk_accounts[]
+	created_at   DateTime      @default(now())
+
+	@@map("users")
+}
+
+model nk_accounts {
+	id           Int           @id @default(autoincrement())
+	discord_id   String
+	nk_id        String        @unique
+	display_name String?
+	linked_at    DateTime      @default(now())
+
+	user         users         @relation(fields: [discord_id], references: [discord_id], onDelete: Cascade)
+
+	@@index([discord_id])
+	@@index([nk_id])
+	@@map("nk_accounts")
+}
+
+model cache_player_data {
+	nk_id        String        @id
+	json_data    Json
+	last_updated DateTime      @default(now())
+
+	@@map("cache_player_data")
+}
+
+model roles_awarded {
+	id           Int           @id @default(autoincrement())
+	discord_id   String
+	role_id      String
+	awarded_at   DateTime      @default(now())
+
+	@@index([discord_id])
+	@@index([role_id])
+	@@map("roles_awarded")
+}
+
+model staff_users {
+	discord_id   String        @id
+	added_by     String
+	added_at     DateTime      @default(now())
+
+	@@map("staff_users")
+}
+
