@@ -5,140 +5,194 @@ A Discord bot that automatically manages roles based on Bloons TD 6 (BTD6) achie
 ## Features
 
 - **Automatic Role Management**: Roles are automatically assigned/removed based on BTD6 achievements
-- **Multi-Account Support**: Link multiple Ninja Kiwi accounts to one Discord account
-- **NKID Exclusivity**: Each NKID can only be linked to one Discord account
+- **Multi-Account Support**: Link multiple Ninja Kiwi accounts (OAKs) to one Discord account
+- **OAK Exclusivity**: Each Open Access Key (OAK) can only be linked to one Discord account
 - **Caching System**: Reduces API calls with configurable cache duration
 - **Scheduled Sync**: Automatically re-evaluates roles at regular intervals
 - **Staff Commands**: Administrative tools for managing user accounts
 - **Error Resilience**: Never removes roles on API failures
+- **Privacy-Focused**: All command responses are ephemeral (only visible to the user)
 
 ## Role Requirements
 
 - **Fast Monkey**: Race rank ≤ 50
 - **Boss Slayer**: Boss rank ≤ 3
 - **Expert Completionist**: All Expert maps with black CHIMPS medal (solo)
-- **Advanced Completionist**: ≥ 25 solo black CHIMPS medals (summed across all linked NKIDs)
+- **Advanced Completionist**: ≥ 25 solo black CHIMPS medals (summed across all linked accounts)
 - **Grandmaster**: Black border on all maps (solo)
 - **The Dart Lord**: Black border on all maps (solo + co-op)
-- **All Achievements**: All BTD6 achievements unlocked on at least one NKID
+- **All Achievements**: All BTD6 achievements unlocked on at least one linked account
 
 ## Prerequisites
 
-- Node.js 20+ 
-- PostgreSQL 14+
+- Node.js 20+
+- PostgreSQL 14+ (or use Docker)
 - Discord Bot Token
 - Discord Application with Bot scope
+- Open Access Key (OAK) from BTD6 (not your regular NKID)
 
-## Local Development Setup
+### Getting Your OAK (Open Access Key)
 
-### 1. Clone and Install
+**Important:** You need an Open Access Key (OAK), not your regular NKID!
 
+1. Open Bloons TD 6
+2. Go to **Settings** → **Open Data**
+3. Generate an **Open Access Key (OAK)**
+4. Use that OAK with `/link account:<OAK>`
+
+**Note:** Your in-game NKID is different from the OAK needed for the API.
+
+## Quick Start
+
+### Docker Deployment (Recommended)
+
+1. **Clone the repository:**
 ```bash
-git clone <repository-url>
-cd "BTD6 Auto Roles"
+git clone https://github.com/BlakeMcBride1625/BTD6-Auto-Assign.git
+cd BTD6-Auto-Assign
+```
+
+2. **Create `.env` file:**
+```bash
+cp .env.example .env
+# Edit .env with your Discord bot token and other required values
+```
+
+3. **Start the bot:**
+```bash
+docker-compose up -d
+```
+
+4. **Initialize database:**
+```bash
+docker-compose exec -T bot npx prisma db push
+```
+
+5. **View logs:**
+```bash
+docker-compose logs -f bot
+```
+
+### Local Development
+
+1. **Install dependencies:**
+```bash
 npm install
 ```
 
-### 2. Environment Configuration
-
-Copy `.env.example` to `.env` and fill in all required values:
-
+2. **Set up environment:**
 ```bash
 cp .env.example .env
+# Edit .env with your configuration
 ```
 
-Required environment variables:
-- `DISCORD_TOKEN`: Your Discord bot token
-- `DISCORD_CLIENT_ID`: Your Discord application client ID
-- `DISCORD_GUILD_ID`: Your Discord server (guild) ID
-- `DISCORD_OWNER_ID`: Your Discord user ID (for owner-only commands)
-- `ROLE_*`: Discord role IDs for each role type
-- `CHANNEL_LOGS`: Discord channel ID for logging
-- `NK_API_BASE`: Ninja Kiwi API base URL (default: https://data.ninjakiwi.com/btd6/players/)
-- `DATABASE_URL`: PostgreSQL connection string
-- `CACHE_DURATION`: Cache duration in minutes (default: 10)
-- `SYNC_INTERVAL`: Sync interval in minutes (default: 15)
-
-### 3. Database Setup
-
+3. **Set up database:**
 ```bash
-# Generate Prisma client
 npm run prisma:generate
-
-# Run migrations
 npm run prisma:migrate
 ```
 
-### 4. Build and Run
-
+4. **Build and run:**
 ```bash
-# Build TypeScript
 npm run build
-
-# Run the bot
 npm start
 
-# Or run in development mode with hot reload
+# Or for development with hot reload:
 npm run dev
 ```
 
-## Docker Deployment
+## Environment Variables
 
-### 1. Environment Setup
+Required environment variables:
 
-Create a `.env` file with all required variables (see Local Development Setup).
+```env
+# Discord Configuration
+DISCORD_TOKEN=your_bot_token
+DISCORD_CLIENT_ID=your_client_id
+DISCORD_GUILD_ID=your_guild_id
+DISCORD_OWNER_ID=your_user_id
 
-### 2. Build and Run
+# Role IDs
+ROLE_FAST_MONKEY=role_id
+ROLE_BOSS_SLAYER=role_id
+ROLE_EXPERT_COMPLETIONIST=role_id
+ROLE_ADVANCED_COMPLETIONIST=role_id
+ROLE_GRANDMASTER=role_id
+ROLE_THE_DART_LORD=role_id
+ROLE_ALL_ACHIEVEMENTS=role_id
 
-```bash
-# Build and start all services
-docker-compose up -d
+# Channels
+CHANNEL_LOGS=channel_id
 
-# View logs
-docker-compose logs -f bot
+# API Configuration
+NK_API_BASE=https://data.ninjakiwi.com/btd6/players/
 
-# Stop services
-docker-compose down
-```
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/btd6_roles
 
-### 3. Database Migrations
+# Optional Settings
+CACHE_DURATION=10          # Cache duration in minutes (default: 10)
+SYNC_INTERVAL=15           # Sync interval in minutes (default: 15)
 
-After first startup, run migrations:
-
-```bash
-docker-compose exec bot npx prisma migrate deploy
+# Docker PostgreSQL (if using docker-compose)
+POSTGRES_USER=btd6
+POSTGRES_PASSWORD=changeme
+POSTGRES_DB=btd6_roles
 ```
 
 ## Commands
 
 ### User Commands
 
-- `/link account:<NKID>` - Link your Ninja Kiwi account
-- `/unlink account:<NKID>` - Unlink a Ninja Kiwi account
-- `/myaccounts` - View all linked accounts
+All user commands are ephemeral (only visible to you).
+
+- `/help` - Show help message with OAK instructions
+- `/link account:<OAK>` - Link your Ninja Kiwi account (requires OAK)
+- `/unlink account:<OAK>` - Unlink a Ninja Kiwi account
+- `/myaccounts` - View all your linked accounts
 - `/myroles` - View your current roles and progression
-- `/help` - Show help message
 
 ### Staff Commands
 
 Requires staff access (added via `/addstaff` or Administrator/Manage Roles permission):
 
 - `/checkuser user:<User>` - View user's linked accounts and stats
-- `/forcelink user:<User> nkid:<NKID>` - Force link an account (removes from previous owner if needed)
-- `/forceremove user:<User> nkid:<NKID>` - Force remove an account
-- `/forcerolesync user:<User>` - Force role recalculation
+- `/forcelink user:<User> nkid:<OAK>` - Force link an account (removes from previous owner if needed)
+- `/forceremove user:<User> [nkid:<OAK>]` - Force remove an account (leave OAK empty to remove all)
+- `/forcerolesync user:<User>` - Force role recalculation for a user
 - `/listall user:<User>` - List all linked accounts for a user
 
 ### Owner Commands
 
 Requires owner access (set via `DISCORD_OWNER_ID`):
 
-- `/addstaff user:<User>` - Add a user to staff (allows them to use staff commands)
+- `/addstaff user:<User>` - Add a user to staff
 - `/removestaff user:<User>` - Remove a user from staff
 
-## Architecture
+## Bot Permissions
 
-### Project Structure
+The bot requires the following Discord permissions:
+
+### Essential Permissions
+
+- **Manage Roles** - Required to add/remove roles from users
+- **Send Messages** - Required for command responses
+- **Embed Links** - Required for rich embeds
+- **Use Slash Commands** - Required for all commands
+- **Read Message History** - Required for log channel
+- **View Channels** - Required to access channels
+
+### Server Setup
+
+1. **Invite the bot** with the required permissions
+2. **Position the bot role** above all roles it needs to manage in the role hierarchy
+3. **Set up log channel** - Ensure the bot can send messages in the log channel
+
+### Permission Integer
+
+Minimum required permission integer: **268445712**
+
+## Project Structure
 
 ```
 src/
@@ -153,17 +207,7 @@ src/
 └── main.ts           # Bot entry point
 ```
 
-### Key Components
-
-- **Config System**: Centralized configuration with environment variable validation
-- **Database**: Prisma ORM with PostgreSQL for data persistence
-- **NK API Integration**: Fetches player data with caching and retry logic
-- **Role Evaluation**: Pure functions for checking role requirements
-- **Scheduled Sync**: Background task that re-evaluates all users periodically
-
 ## Configuration
-
-All configuration is loaded from environment variables via `src/config/config.ts`. No hardcoded values are allowed.
 
 ### Cache Settings
 
@@ -185,9 +229,10 @@ All configuration is loaded from environment variables via `src/config/config.ts
 ## Security
 
 - Staff commands require Administrator or Manage Roles permission
-- NKID format validation prevents injection attacks
+- OAK format validation prevents injection attacks
 - Database transactions ensure data consistency
 - Environment variables for all sensitive data
+- All command responses are ephemeral for privacy
 
 ## Troubleshooting
 
@@ -196,6 +241,7 @@ All configuration is loaded from environment variables via `src/config/config.ts
 1. Check that commands are registered: Look for "Successfully registered all commands" in logs
 2. Verify bot has proper permissions in Discord server
 3. Check that bot is in the correct guild (guild ID matches)
+4. Wait a few minutes for commands to sync globally
 
 ### Roles not updating
 
@@ -204,12 +250,18 @@ All configuration is loaded from environment variables via `src/config/config.ts
 3. Check database connection
 4. Use `/forcerolesync` to manually trigger update
 
+### Bot can't add roles
+
+1. Check that bot role is above the target role in hierarchy
+2. Verify `MANAGE_ROLES` permission is enabled
+3. Ensure bot role has permission to manage the specific role
+
 ### Database connection errors
 
 1. Verify `DATABASE_URL` is correct
 2. Check PostgreSQL is running and accessible
 3. Ensure database exists
-4. Run migrations: `npm run prisma:migrate`
+4. Run migrations: `npm run prisma:migrate` or `docker-compose exec bot npx prisma db push`
 
 ## Development
 
@@ -231,7 +283,22 @@ npm run lint
 npm run prisma:studio
 ```
 
+### Docker Commands
+
+```bash
+# Rebuild bot
+docker-compose build bot
+
+# Restart bot
+docker-compose restart bot
+
+# View logs
+docker-compose logs -f bot
+
+# Stop all services
+docker-compose down
+```
+
 ## License
 
 MIT
-
