@@ -21,7 +21,7 @@ export const data = new SlashCommandBuilder()
 	.addStringOption((option) =>
 		option
 			.setName("account")
-			.setDescription("Your Ninja Kiwi account ID (NKID)")
+			.setDescription("Your Open Access Key (OAK) - Get it from BTD6 Settings → Open Data")
 			.setRequired(true),
 	);
 

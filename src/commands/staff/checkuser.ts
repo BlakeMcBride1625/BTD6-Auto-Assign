@@ -43,7 +43,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 				embeds: [
 					createErrorEmbed(
 						"No Accounts Found",
-						`${targetUser.tag} has no linked NKIDs.`,
+						`${targetUser.tag} has no linked OAKs.`,
 					),
 				],
 			});

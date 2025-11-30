@@ -19,7 +19,7 @@ export const data = new SlashCommandBuilder()
 	.addStringOption((option) =>
 		option
 			.setName("account")
-			.setDescription("The Ninja Kiwi account ID (NKID) to unlink")
+			.setDescription("The Open Access Key (OAK) to unlink")
 			.setRequired(true),
 	);
 

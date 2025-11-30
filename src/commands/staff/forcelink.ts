@@ -13,7 +13,7 @@ import { applyRoleChanges } from "../../utils/roleManager.js";
 
 export const data = new SlashCommandBuilder()
 	.setName("forcelink")
-	.setDescription("Force link an NKID to a user (Staff only)")
+	.setDescription("Force link an OAK to a user (Staff only)")
 	.addUserOption((option) =>
 		option
 			.setName("user")
@@ -23,7 +23,7 @@ export const data = new SlashCommandBuilder()
 	.addStringOption((option) =>
 		option
 			.setName("nkid")
-			.setDescription("The NKID to link")
+			.setDescription("The Open Access Key (OAK) to link")
 			.setRequired(true),
 	);
 

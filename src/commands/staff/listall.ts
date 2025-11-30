@@ -9,7 +9,7 @@ import { logger } from "../../utils/logger.js";
 
 export const data = new SlashCommandBuilder()
 	.setName("listall")
-	.setDescription("List all linked NKIDs for a user (Staff only)")
+	.setDescription("List all linked OAKs for a user (Staff only)")
 	.addUserOption((option) =>
 		option
 			.setName("user")
@@ -41,7 +41,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 				embeds: [
 					createErrorEmbed(
 						"No Accounts Found",
-						`${targetUser.tag} has no linked NKIDs.`,
+						`${targetUser.tag} has no linked OAKs.`,
 					),
 				],
 			});
