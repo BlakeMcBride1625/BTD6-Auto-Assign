@@ -299,6 +299,12 @@ docker-compose logs -f bot
 docker-compose down
 ```
 
+## Credits
+
+Made by:
+- **GitHub**: [@BlakeMcBride1625](https://github.com/BlakeMcBride1625)
+- **Discord**: epildev
+
 ## License
 
 MIT
