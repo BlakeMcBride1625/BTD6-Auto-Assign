@@ -23,6 +23,10 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Install OpenSSL 1.1.x for Prisma (from edge repository)
+RUN apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main openssl1.1-compat || \
+    apk add --no-cache openssl
+
 # Copy package files
 COPY package.json package-lock.json* ./
 
