@@ -261,11 +261,11 @@ The bot uses embedded messages for all Discord log channel messages:
 
 - **Staff Commands**: Logged with structured fields (Staff Member, Target User, Details)
 - **Account Changes**: Logged when accounts are linked/unlinked
-- **Errors & Warnings**: Always logged with appropriate colors
+- **Errors & Warnings**: Always logged with appropriate colours
 - **Scheduled Syncs**: Run silently (no logs unless errors occur)
 - **Initial Sync**: Silent on bot restart
 
-All logs are sent as rich embeds with timestamps and appropriate colors (blue for info, yellow for warnings, red for errors).
+All logs are sent as rich embeds with timestamps and appropriate colours (blue for info, yellow for warnings, red for errors).
 
 ## Troubleshooting
 
