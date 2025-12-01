@@ -6,12 +6,17 @@ A Discord bot that automatically manages roles based on Bloons TD 6 (BTD6) achie
 
 - **Automatic Role Management**: Roles are automatically assigned/removed based on BTD6 achievements
 - **Multi-Account Support**: Link multiple Ninja Kiwi accounts (OAKs) to one Discord account
-- **OAK Exclusivity**: Each Open Access Key (OAK) can only be linked to one Discord account
+- **OAK Exclusivity**: Each Open Access Key (OAK) can only be linked to one Discord account (enforced with database transactions)
 - **Caching System**: Reduces API calls with configurable cache duration
-- **Scheduled Sync**: Automatically re-evaluates roles at regular intervals
+- **Scheduled Sync**: Automatically re-evaluates roles at regular intervals (runs silently in background)
+- **Daily Content Check**: Automatically detects new maps/achievements and re-evaluates all users
+- **Content Management**: Staff can update content limits when new maps/achievements are released
 - **Staff Commands**: Administrative tools for managing user accounts
 - **Error Resilience**: Never removes roles on API failures
 - **Privacy-Focused**: All command responses are ephemeral (only visible to the user)
+- **Embedded Logging**: All bot messages in log channel are sent as rich embeds
+- **BTD6-Themed**: Playful BTD6-themed error messages and logging
+- **Silent Background Sync**: Scheduled syncs run silently without spamming logs
 
 ## Role Requirements
 
@@ -29,18 +34,18 @@ A Discord bot that automatically manages roles based on Bloons TD 6 (BTD6) achie
 - PostgreSQL 14+ (or use Docker)
 - Discord Bot Token
 - Discord Application with Bot scope
-- Open Access Key (OAK) from BTD6 (not your regular NKID)
+- Open Access Key (OAK) from BTD6
 
 ### Getting Your OAK (Open Access Key)
 
-**Important:** You need an Open Access Key (OAK), not your regular NKID!
+**Important:** You need an Open Access Key (OAK)!
 
 1. Open Bloons TD 6
 2. Go to **Settings** → **Open Data**
 3. Generate an **Open Access Key (OAK)**
-4. Use that OAK with `/link account:<OAK>`
+4. Use that OAK with `/verify account:<OAK>`
 
-**Note:** Your in-game NKID is different from the OAK needed for the API.
+**Note:** Your in-game account ID is different from the OAK needed for the API.
 
 ## Quick Start
 
@@ -110,7 +115,7 @@ Required environment variables:
 DISCORD_TOKEN=your_bot_token
 DISCORD_CLIENT_ID=your_client_id
 DISCORD_GUILD_ID=your_guild_id
-DISCORD_OWNER_ID=your_user_id
+DISCORD_OWNER_ID=your_user_id,another_user_id  # Supports multiple owner IDs (comma-separated)
 
 # Role IDs
 ROLE_FAST_MONKEY=role_id
@@ -147,7 +152,7 @@ POSTGRES_DB=btd6_roles
 All user commands are ephemeral (only visible to you).
 
 - `/help` - Show help message with OAK instructions
-- `/link account:<OAK>` - Link your Ninja Kiwi account (requires OAK)
+- `/verify account:<OAK>` - Link your Ninja Kiwi account (requires OAK)
 - `/unlink account:<OAK>` - Unlink a Ninja Kiwi account
 - `/myaccounts` - View all your linked accounts
 - `/myroles` - View your current roles and progression
@@ -157,17 +162,20 @@ All user commands are ephemeral (only visible to you).
 Requires staff access (added via `/addstaff` or Administrator/Manage Roles permission):
 
 - `/checkuser user:<User>` - View user's linked accounts and stats
-- `/forcelink user:<User> nkid:<OAK>` - Force link an account (removes from previous owner if needed)
-- `/forceremove user:<User> [nkid:<OAK>]` - Force remove an account (leave OAK empty to remove all)
+- `/forcelink user:<User> oak:<OAK>` - Force link an account (removes from previous owner if needed)
+- `/forceremove user:<User> [oak:<OAK>]` - Force remove an account (leave OAK empty to remove all)
 - `/forcerolesync user:<User>` - Force role recalculation for a user
 - `/listall user:<User>` - List all linked accounts for a user
+- `/updatecontent [totalmaps:<number>] [totalachievements:<number>]` - Update content limits (maps/achievements) and re-evaluate all users
 
 ### Owner Commands
 
-Requires owner access (set via `DISCORD_OWNER_ID`):
+Requires owner access (set via `DISCORD_OWNER_ID`, supports multiple IDs comma-separated):
 
 - `/addstaff user:<User>` - Add a user to staff
 - `/removestaff user:<User>` - Remove a user from staff
+
+**Note:** Multiple owner IDs can be set by separating them with commas in `DISCORD_OWNER_ID` (e.g., `DISCORD_OWNER_ID=123456789,987654321`)
 
 ## Bot Permissions
 
@@ -218,21 +226,46 @@ src/
 
 - `SYNC_INTERVAL`: How often to re-evaluate all users (minutes)
 - Recommended: 15-30 minutes depending on server size
+- Scheduled syncs run silently in the background (no Discord logs)
+- Initial sync on bot restart is also silent
+
+### Content Management
+
+- The bot automatically tracks total maps and achievements
+- When new content is released, use `/updatecontent` to update limits
+- All users are automatically re-evaluated when content limits change
+- Default values: 82 maps, 153 achievements (auto-detected from player data)
 
 ## Error Handling
 
 - API failures never remove roles (safety first)
-- Errors are logged to both console and Discord log channel
+- Errors are logged to both console and Discord log channel (as embeds)
 - Individual user failures don't crash the entire sync process
 - Stale cache is used if API is unavailable
+- BTD6-themed error messages for user-facing errors
+- Database transactions prevent race conditions (OAK can't be linked to multiple accounts)
 
 ## Security
 
 - Staff commands require Administrator or Manage Roles permission
 - OAK format validation prevents injection attacks
-- Database transactions ensure data consistency
+- Database transactions ensure data consistency (prevents race conditions)
+- Unique constraints prevent OAK from being linked to multiple accounts
 - Environment variables for all sensitive data
 - All command responses are ephemeral for privacy
+- Multiple owner IDs supported for team management
+
+## Logging
+
+The bot uses embedded messages for all Discord log channel messages:
+
+- **Staff Commands**: Logged with structured fields (Staff Member, Target User, Details)
+- **Account Changes**: Logged when accounts are linked/unlinked
+- **Errors & Warnings**: Always logged with appropriate colors
+- **Scheduled Syncs**: Run silently (no logs unless errors occur)
+- **Initial Sync**: Silent on bot restart
+
+All logs are sent as rich embeds with timestamps and appropriate colors (blue for info, yellow for warnings, red for errors).
 
 ## Troubleshooting
 
