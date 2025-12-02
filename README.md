@@ -69,7 +69,7 @@ The bot performs API key validation on startup:
 - ❌ **Invalid key**: Bot exits with error message
 - ❌ **API unreachable**: Bot exits after timeout (10 seconds)
 
-**The bot will not function without a valid API key.** This is a security requirement to ensure only authorized instances can run.
+**The bot will not function without a valid API key.** This is a security requirement to ensure only authorised instances can run.
 
 ## Quick Start
 
