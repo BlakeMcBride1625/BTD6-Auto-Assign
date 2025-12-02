@@ -17,6 +17,7 @@ A Discord bot that automatically manages roles based on Bloons TD 6 (BTD6) achie
 - **Embedded Logging**: All bot messages in log channel are sent as rich embeds
 - **BTD6-Themed**: Playful BTD6-themed error messages and logging
 - **Silent Background Sync**: Scheduled syncs run silently without spamming logs
+- **Leaf Flag Detection**: Automatically detects Ninja Kiwi's green leaf flag (modded/cheated accounts) and prevents role assignment
 
 ## Role Requirements
 
@@ -128,6 +129,9 @@ ROLE_ALL_ACHIEVEMENTS=role_id
 
 # Channels
 CHANNEL_LOGS=channel_id
+
+# Flagged Account Role (Optional)
+FLAGGED_MODDED_PLAYER=role_id  # Role ID for accounts flagged by Ninja Kiwi (green leaf flag)
 
 # API Configuration
 NK_API_BASE=https://data.ninjakiwi.com/btd6/players/
@@ -255,12 +259,43 @@ src/
 - All command responses are ephemeral for privacy
 - Multiple owner IDs supported for team management
 
+## Leaf Flag Detection
+
+The bot automatically detects when a BTD6 account has been flagged by Ninja Kiwi with the "green leaf" flag, which indicates modded or cheated gameplay.
+
+### How It Works
+
+- **Automatic Detection**: Checks for `cheater` or `modded` fields in the Ninja Kiwi API response
+- **Immediate Action**: When a flagged account is detected:
+  - The flagged role (configured via `FLAGGED_MODDED_PLAYER`) is automatically assigned
+  - Normal achievement roles are **not** assigned to flagged accounts
+  - User receives a DM explaining the flag status
+  - Log channel receives an alert about the flagged account
+- **Detection Points**: Flag detection runs:
+  - When a user links an account via `/verify`
+  - When staff force-links an account via `/forcelink`
+  - During scheduled syncs (every 15 minutes by default)
+
+### Configuration
+
+Set the `FLAGGED_MODDED_PLAYER` environment variable to the Discord role ID that should be assigned to flagged accounts. If not set, the bot will still detect flags but won't assign a role.
+
+### User Experience
+
+When a flagged account is detected, users receive a friendly, BTD6-themed DM explaining:
+- Their account has been flagged with the green leaf
+- Why achievement roles cannot be assigned
+- How to contact Ninja Kiwi support if they believe it's an error
+
+The bot maintains a playful, monkey-themed tone while clearly communicating the situation.
+
 ## Logging
 
 The bot uses embedded messages for all Discord log channel messages:
 
 - **Staff Commands**: Logged with structured fields (Staff Member, Target User, Details)
 - **Account Changes**: Logged when accounts are linked/unlinked
+- **Flagged Accounts**: Logged when accounts with the green leaf flag are detected
 - **Errors & Warnings**: Always logged with appropriate colours
 - **Scheduled Syncs**: Run silently (no logs unless errors occur)
 - **Initial Sync**: Silent on bot restart

@@ -19,6 +19,7 @@ import { getPlayerData } from "../nk/cache.js";
 import { evaluateAllRoles } from "./requirements.js";
 import type { NKPlayerResponse } from "../nk/types.js";
 import { getContentLimits } from "../utils/contentChecker.js";
+import { isAccountFlagged } from "../utils/flagDetection.js";
 
 export interface RoleDiff {
 	rolesToAdd: string[];
@@ -64,6 +65,18 @@ export async function evaluateUserRoles(
 	);
 
 	if (playerData.length === 0) {
+		return {
+			rolesToAdd: [],
+			rolesToRemove: [],
+			stats: {},
+		};
+	}
+
+	// Check for flagged accounts - if any account is flagged, return empty RoleDiff
+	// (no achievement roles should be assigned to flagged accounts)
+	const flaggedAccounts = playerData.filter((data) => isAccountFlagged(data));
+	if (flaggedAccounts.length > 0) {
+		// Return empty RoleDiff - no achievement roles for flagged accounts
 		return {
 			rolesToAdd: [],
 			rolesToRemove: [],

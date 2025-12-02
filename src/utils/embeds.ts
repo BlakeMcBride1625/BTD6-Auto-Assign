@@ -116,3 +116,52 @@ export function createRoleRewardEmbed(
 	return embed;
 }
 
+export function createFlaggedAccountEmbed(user: User, accountId: string): EmbedBuilder {
+	const embed = new EmbedBuilder()
+		.setAuthor({
+			name: user.tag,
+			iconURL: user.displayAvatarURL(),
+		})
+		.setTitle("🍃 Uh Oh! The Green Leaf Has Appeared!")
+		.setColor(EmbedColor.Warning)
+		.setDescription(
+			`Hey there, ${user.username}! The monkeys have spotted something... your BTD6 account has been marked with the **green leaf flag** by Ninja Kiwi! 🍃\n\n` +
+			`This little green leaf means your account has been detected as having **modded or altered gameplay**. The monkeys are a bit confused - they can't tell if those bananas are real or not! 🐵🍌\n\n` +
+			`**What this means:**\n` +
+			`• Your account has been flagged for modded/cheated gameplay\n` +
+			`• Normal achievement roles cannot be assigned to flagged accounts\n` +
+			`• The monkeys need legitimate gameplay to hand out those sweet role rewards\n\n` +
+			`**Account ID:** \`${accountId}\`\n\n` +
+			`If you believe this is an error, you'll need to contact Ninja Kiwi support. The monkeys here can't remove that green leaf - only the banana overlords at Ninja Kiwi can! 🍌👑`
+		)
+		.setTimestamp();
+
+	return embed;
+}
+
+export function createFlaggedAccountLogEmbed(user: User, accountId: string): EmbedBuilder {
+	const embed = new EmbedBuilder()
+		.setTitle("🍃 Flagged Account Detected - Green Leaf Alert!")
+		.setColor(EmbedColor.Warning)
+		.setTimestamp()
+		.addFields(
+			{
+				name: "Discord User",
+				value: `${user.tag} (${user.id})`,
+				inline: true,
+			},
+			{
+				name: "Account ID",
+				value: `\`${accountId}\``,
+				inline: true,
+			},
+			{
+				name: "Flag Status",
+				value: "🍃 Account has the green leaf flag (modded/cheated)",
+				inline: false,
+			}
+		);
+
+	return embed;
+}
+

@@ -20,6 +20,8 @@ import { applyRoleChanges } from "./roleManager.js";
 import { logger } from "./logger.js";
 import config from "../config/config.js";
 import { checkForNewContent, reEvaluateAllUsersOnNewContent } from "./contentChecker.js";
+import { getPlayerData } from "../nk/cache.js";
+import { isAccountFlagged } from "./flagDetection.js";
 
 let syncInterval: NodeJS.Timeout | null = null;
 let dailyContentCheckInterval: NodeJS.Timeout | null = null;
@@ -123,6 +125,37 @@ async function runSync(client: Client, silent = false): Promise<void> {
 			}
 
 			try {
+				// Check for flagged accounts before role evaluation
+				let hasFlaggedAccount = false;
+				let flaggedAccountId: string | null = null;
+				for (const account of user.nk_accounts) {
+					const playerData = await getPlayerData(account.nk_id, false);
+					if (playerData && isAccountFlagged(playerData)) {
+						hasFlaggedAccount = true;
+						flaggedAccountId = account.nk_id;
+						break;
+					}
+				}
+
+				// If account is flagged, assign flagged role and skip normal role evaluation
+				if (hasFlaggedAccount && config.discord.flaggedModdedPlayer) {
+					try {
+						const member = await guild.members.fetch(user.discord_id);
+						const flaggedRole = await guild.roles.fetch(config.discord.flaggedModdedPlayer);
+						if (flaggedRole && !member.roles.cache.has(config.discord.flaggedModdedPlayer)) {
+							await member.roles.add(flaggedRole);
+							if (!silent) {
+								logger.logFlaggedAccount(member.user, flaggedAccountId || "Unknown");
+							}
+						}
+					} catch (error) {
+						logger.error(`🐵 Failed to assign flagged role during sync - the monkeys are having trouble!`, false, error);
+					}
+					// Skip normal role evaluation for flagged accounts
+					processed++;
+					continue;
+				}
+
 				const roleDiff = await evaluateUserRoles(user.discord_id, false);
 				
 				// Get member to get username for logging

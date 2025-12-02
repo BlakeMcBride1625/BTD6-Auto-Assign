@@ -26,10 +26,13 @@ import {
 	createSuccessEmbed,
 	createErrorEmbed,
 	createWarningEmbed,
+	createFlaggedAccountEmbed,
 } from "../../utils/embeds.js";
 import { applyRoleChanges } from "../../utils/roleManager.js";
 import { logger } from "../../utils/logger.js";
 import { sendDMWithAutoDelete } from "../../utils/dmManager.js";
+import { isAccountFlagged } from "../../utils/flagDetection.js";
+import config from "../../config/config.js";
 
 export const data = new SlashCommandBuilder()
 	.setName("verify")
@@ -58,17 +61,52 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 	// Fetch player data from API first (before transaction to avoid holding lock)
 	const playerData = await getPlayerData(oak, true);
 
-		if (!playerData) {
-			await interaction.editReply({
-				embeds: [
-					createErrorEmbed(
-						"Account Not Found",
-						"That OAK doesn't look quite right... even the Dart Monkey is confused!\n\n**You need an Open Access Key (OAK), not just your NKID!**\n\n**How to get your OAK:**\n1. Open BTD6\n2. Go to Settings → Open Data\n3. Generate an Open Access Key (OAK)\n4. Use that OAK (not your regular NKID) with `/verify`\n\n**Note:** The in-game NKID is different from the OAK needed for the API.",
-					),
-				],
-			});
-			return;
+	if (!playerData) {
+		await interaction.editReply({
+			embeds: [
+				createErrorEmbed(
+					"Account Not Found",
+					"That OAK doesn't look quite right... even the Dart Monkey is confused!\n\n**You need an Open Access Key (OAK), not just your NKID!**\n\n**How to get your OAK:**\n1. Open BTD6\n2. Go to Settings → Open Data\n3. Generate an Open Access Key (OAK)\n4. Use that OAK (not your regular NKID) with `/verify`\n\n**Note:** The in-game NKID is different from the OAK needed for the API.",
+				),
+			],
+		});
+		return;
+	}
+
+	// Check for leaf flag (cheater/modded) - must run before any linking or role assignment
+	if (isAccountFlagged(playerData)) {
+		// Assign flagged role if configured
+		if (config.discord.flaggedModdedPlayer && interaction.guild) {
+			try {
+				const member = await interaction.guild.members.fetch(discordId);
+				const flaggedRole = await interaction.guild.roles.fetch(config.discord.flaggedModdedPlayer);
+				if (flaggedRole && !member.roles.cache.has(config.discord.flaggedModdedPlayer)) {
+					await member.roles.add(flaggedRole);
+				}
+			} catch (error) {
+				logger.error(`🐵 Failed to assign flagged role to ${interaction.user.tag} - the monkeys are having trouble!`, false, error);
+			}
 		}
+
+		// Send user-facing embed via DM
+		try {
+			const flaggedEmbed = createFlaggedAccountEmbed(interaction.user, oak);
+			await sendDMWithAutoDelete(interaction.user, [flaggedEmbed]);
+			await interaction.editReply({
+				embeds: [createSuccessEmbed("Check your DMs!", "I've sent you a message about your account status.")],
+			});
+		} catch (dmError) {
+			// If DM fails, send in channel as fallback
+			const flaggedEmbed = createFlaggedAccountEmbed(interaction.user, oak);
+			await interaction.editReply({ embeds: [flaggedEmbed] });
+		}
+
+		// Log to log channel
+		logger.logFlaggedAccount(interaction.user, oak);
+
+		// Early return - do not proceed with linking or role assignment
+		return;
+	}
 
 	try {
 		const prisma = getPrismaClient();

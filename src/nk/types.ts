@@ -79,6 +79,9 @@ export interface NKPlayerResponse {
 		maps?: Record<string, unknown>;
 		achievements?: Record<string, { unlocked?: boolean }>;
 	};
+	// Leaf flag detection fields
+	cheater?: boolean;
+	modded?: boolean;
 }
 
 export interface CachedPlayerData {

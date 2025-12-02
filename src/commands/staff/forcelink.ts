@@ -23,9 +23,11 @@ import { getPlayerData } from "../../nk/cache.js";
 import { evaluateUserRoles } from "../../roles/evaluateRoles.js";
 import { hasStaffAccess } from "../../utils/permissions.js";
 import { validateOAK, sanitizeOAK } from "../../utils/validation.js";
-import { createSuccessEmbed, createErrorEmbed } from "../../utils/embeds.js";
+import { createSuccessEmbed, createErrorEmbed, createFlaggedAccountEmbed } from "../../utils/embeds.js";
 import { logger } from "../../utils/logger.js";
 import { applyRoleChanges } from "../../utils/roleManager.js";
+import { isAccountFlagged } from "../../utils/flagDetection.js";
+import config from "../../config/config.js";
 
 export const data = new SlashCommandBuilder()
 	.setName("forcelink")
@@ -77,6 +79,40 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 				),
 			],
 		});
+		return;
+	}
+
+	// Check for leaf flag (cheater/modded) - must run before any linking or role assignment
+	if (isAccountFlagged(playerData)) {
+		// Assign flagged role if configured
+		if (config.discord.flaggedModdedPlayer && interaction.guild) {
+			try {
+				const member = await interaction.guild.members.fetch(targetUser.id);
+				const flaggedRole = await interaction.guild.roles.fetch(config.discord.flaggedModdedPlayer);
+				if (flaggedRole && !member.roles.cache.has(config.discord.flaggedModdedPlayer)) {
+					await member.roles.add(flaggedRole);
+				}
+			} catch (error) {
+				logger.error(`🐵 Failed to assign flagged role to ${targetUser.tag} - the monkeys are having trouble!`, false, error);
+			}
+		}
+
+		// Send user-facing embed to staff member (not target user, since this is a staff action)
+		const flaggedEmbed = createFlaggedAccountEmbed(targetUser, oak);
+		await interaction.editReply({
+			embeds: [
+				createErrorEmbed(
+					"Flagged Account Detected",
+					`The account you're trying to link has been flagged with the green leaf by Ninja Kiwi. The flagged role has been assigned to ${targetUser.tag}.`,
+				),
+				flaggedEmbed,
+			],
+		});
+
+		// Log to log channel
+		logger.logFlaggedAccount(targetUser, oak);
+
+		// Early return - do not proceed with linking or role assignment
 		return;
 	}
 

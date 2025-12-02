@@ -269,5 +269,32 @@ export const logger = {
 			// Ignore errors in logging
 		});
 	},
+	logFlaggedAccount: (user: User, accountId: string) => {
+		const embed = new EmbedBuilder()
+			.setTitle("🍃 Flagged Account Detected - Green Leaf Alert!")
+			.setColor(EmbedColor.Warning)
+			.setTimestamp()
+			.addFields(
+				{
+					name: "Discord User",
+					value: `${user.tag} (${user.id})`,
+					inline: true,
+				},
+				{
+					name: "Account ID",
+					value: `\`${accountId}\``,
+					inline: true,
+				},
+				{
+					name: "Flag Status",
+					value: "🍃 Account has the green leaf flag (modded/cheated)",
+					inline: false,
+				}
+			);
+
+		logEmbedToDiscord(embed).catch(() => {
+			// Ignore errors in logging
+		});
+	},
 };
 
