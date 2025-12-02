@@ -20,6 +20,8 @@ import {
 import { getPrismaClient } from "../../database/client.js";
 import { createInfoEmbed, createErrorEmbed, createSuccessEmbed } from "../../utils/embeds.js";
 import { sendDMWithAutoDelete } from "../../utils/dmManager.js";
+import { checkApiKeyValid } from "../../utils/apiValidation.js";
+import config from "../../config/config.js";
 
 export const data = new SlashCommandBuilder()
 	.setName("myaccounts")
@@ -27,6 +29,20 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
 	await interaction.deferReply({ ephemeral: true });
+
+	// Check API key validity before proceeding
+	const isApiValid = await checkApiKeyValid(config.api.key);
+	if (!isApiValid) {
+		await interaction.editReply({
+			embeds: [
+				createErrorEmbed(
+					"Service Unavailable",
+					"The bot is currently unavailable due to API validation issues. Please contact staff.",
+				),
+			],
+		});
+		return;
+	}
 
 	const prisma = getPrismaClient();
 	const discordId = interaction.user.id;

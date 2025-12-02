@@ -23,6 +23,7 @@ import { hasStaffAccess } from "../../utils/permissions.js";
 import { createInfoEmbed, createErrorEmbed } from "../../utils/embeds.js";
 import { logger } from "../../utils/logger.js";
 import config from "../../config/config.js";
+import { checkApiKeyValid } from "../../utils/apiValidation.js";
 
 export const data = new SlashCommandBuilder()
 	.setName("checkuser")
@@ -36,6 +37,20 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
 	await interaction.deferReply({ ephemeral: true });
+
+	// Check API key validity before proceeding
+	const isApiValid = await checkApiKeyValid(config.api.key);
+	if (!isApiValid) {
+		await interaction.editReply({
+			embeds: [
+				createErrorEmbed(
+					"Service Unavailable",
+					"The bot is currently unavailable due to API validation issues. Please contact staff.",
+				),
+			],
+		});
+		return;
+	}
 
 	if (!interaction.member || !(await hasStaffAccess(interaction.member as any))) {
 		await interaction.editReply({

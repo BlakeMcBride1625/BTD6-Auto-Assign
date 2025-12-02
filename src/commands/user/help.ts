@@ -18,14 +18,31 @@ import {
 	SlashCommandBuilder,
 	GuildMember,
 } from "discord.js";
-import { createInfoEmbed } from "../../utils/embeds.js";
+import { createInfoEmbed, createErrorEmbed } from "../../utils/embeds.js";
 import { hasStaffAccess, isOwner } from "../../utils/permissions.js";
+import { checkApiKeyValid } from "../../utils/apiValidation.js";
+import config from "../../config/config.js";
 
 export const data = new SlashCommandBuilder()
 	.setName("help")
 	.setDescription("Get help and information about the bot commands");
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
+	// Check API key validity before proceeding
+	const isApiValid = await checkApiKeyValid(config.api.key);
+	if (!isApiValid) {
+		await interaction.reply({
+			embeds: [
+				createErrorEmbed(
+					"Service Unavailable",
+					"The bot is currently unavailable due to API validation issues. Please contact staff.",
+				),
+			],
+			ephemeral: true,
+		});
+		return;
+	}
+
 	if (!interaction.guild || !interaction.member) {
 		await interaction.reply({
 			embeds: [createInfoEmbed("Error", "This command can only be used in a server.")],

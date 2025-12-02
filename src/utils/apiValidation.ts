@@ -56,16 +56,49 @@ export async function validateApiKey(apiKey: string | undefined): Promise<boolea
 			process.exit(1);
 		}
 
-		logger.info("✅ API key validated successfully", false);
-		return true;
-	} catch (error) {
-		if (error instanceof Error && error.name === "AbortError") {
-			logger.error("API validation request timed out", false);
-		} else {
-			logger.error(`Failed to validate API key: ${error}`, false);
+	logger.info("✅ API key validated successfully", false);
+	return true;
+} catch (error) {
+	if (error instanceof Error && error.name === "AbortError") {
+		logger.error("API validation request timed out", false);
+	} else {
+		logger.error(`Failed to validate API key: ${error}`, false);
+	}
+	logger.error("Bot cannot start without API key validation.", false);
+	process.exit(1);
+}
+}
+
+/**
+ * Check if the API key is currently valid (non-blocking, returns boolean).
+ * This function does NOT exit the process - use for runtime checks.
+ * Returns true if valid, false otherwise.
+ */
+export async function checkApiKeyValid(apiKey: string | undefined): Promise<boolean> {
+	if (!apiKey) {
+		return false;
+	}
+
+	try {
+		const url = `${API_BASE_URL}/api/${PROJECT_SLUG}/validate`;
+		const response = await fetch(`${url}?key=${encodeURIComponent(apiKey)}`, {
+			method: "GET",
+			headers: {
+				"Accept": "application/json",
+			},
+			signal: AbortSignal.timeout(5000), // 5 second timeout for runtime checks
+		});
+
+		if (!response.ok) {
+			return false;
 		}
-		logger.error("Bot cannot start without API key validation.", false);
-		process.exit(1);
+
+		const data = await response.json() as { valid?: boolean };
+		return data.valid === true;
+	} catch (error) {
+		// Log error but don't exit - this is a runtime check
+		logger.error(`API validation check failed: ${error}`, false);
+		return false;
 	}
 }
 

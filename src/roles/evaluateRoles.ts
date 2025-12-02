@@ -20,6 +20,7 @@ import { evaluateAllRoles } from "./requirements.js";
 import type { NKPlayerResponse } from "../nk/types.js";
 import { getContentLimits } from "../utils/contentChecker.js";
 import { isAccountFlagged } from "../utils/flagDetection.js";
+import { checkApiKeyValid } from "../utils/apiValidation.js";
 
 export interface RoleDiff {
 	rolesToAdd: string[];
@@ -40,6 +41,17 @@ export async function evaluateUserRoles(
 	discordId: string,
 	forceRefresh = false,
 ): Promise<RoleDiff> {
+	// Check API key validity before proceeding
+	const isApiValid = await checkApiKeyValid(config.api.key);
+	if (!isApiValid) {
+		// Return empty RoleDiff if API is invalid - don't modify roles
+		return {
+			rolesToAdd: [],
+			rolesToRemove: [],
+			stats: {},
+		};
+	}
+
 	const prisma = getPrismaClient();
 
 	// Get all linked OAKs for this user

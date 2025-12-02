@@ -33,6 +33,7 @@ import { logger } from "../../utils/logger.js";
 import { sendDMWithAutoDelete } from "../../utils/dmManager.js";
 import { isAccountFlagged } from "../../utils/flagDetection.js";
 import config from "../../config/config.js";
+import { checkApiKeyValid } from "../../utils/apiValidation.js";
 
 export const data = new SlashCommandBuilder()
 	.setName("verify")
@@ -46,6 +47,20 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
 	await interaction.deferReply({ ephemeral: true });
+
+	// Check API key validity before proceeding
+	const isApiValid = await checkApiKeyValid(config.api.key);
+	if (!isApiValid) {
+		await interaction.editReply({
+			embeds: [
+				createErrorEmbed(
+					"Service Unavailable",
+					"The bot is currently unavailable due to API validation issues. Please contact staff.",
+				),
+			],
+		});
+		return;
+	}
 
 	const oak = sanitizeOAK(interaction.options.getString("account", true));
 

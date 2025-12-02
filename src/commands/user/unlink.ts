@@ -27,6 +27,8 @@ import {
 import { applyRoleChanges } from "../../utils/roleManager.js";
 import { logger } from "../../utils/logger.js";
 import { sendDMWithAutoDelete } from "../../utils/dmManager.js";
+import { checkApiKeyValid } from "../../utils/apiValidation.js";
+import config from "../../config/config.js";
 
 export const data = new SlashCommandBuilder()
 	.setName("unlink")
@@ -40,6 +42,20 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
 	await interaction.deferReply({ ephemeral: true });
+
+	// Check API key validity before proceeding
+	const isApiValid = await checkApiKeyValid(config.api.key);
+	if (!isApiValid) {
+		await interaction.editReply({
+			embeds: [
+				createErrorEmbed(
+					"Service Unavailable",
+					"The bot is currently unavailable due to API validation issues. Please contact staff.",
+				),
+			],
+		});
+		return;
+	}
 
 	const oak = sanitizeOAK(interaction.options.getString("account", true));
 

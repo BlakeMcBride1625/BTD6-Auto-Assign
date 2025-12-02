@@ -22,6 +22,7 @@ import config from "../config/config.js";
 import { checkForNewContent, reEvaluateAllUsersOnNewContent } from "./contentChecker.js";
 import { getPlayerData } from "../nk/cache.js";
 import { isAccountFlagged } from "./flagDetection.js";
+import { checkApiKeyValid } from "./apiValidation.js";
 
 let syncInterval: NodeJS.Timeout | null = null;
 let dailyContentCheckInterval: NodeJS.Timeout | null = null;
@@ -96,6 +97,13 @@ async function runDailyContentCheck(client: Client): Promise<void> {
 }
 
 async function runSync(client: Client, silent = false): Promise<void> {
+	// Check API key validity before proceeding
+	const isApiValid = await checkApiKeyValid(config.api.key);
+	if (!isApiValid) {
+		logger.error("🐵 API validation failed - scheduled sync cancelled. The monkeys are confused!", false);
+		return;
+	}
+
 	const prisma = getPrismaClient();
 	const guild = await client.guilds.fetch(config.discord.guildId);
 
