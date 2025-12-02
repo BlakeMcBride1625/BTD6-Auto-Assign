@@ -68,7 +68,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
 		// Log to log channel
 		logger.info(
-			`Owner command /removestaff used by ${interaction.user.tag}: Removed ${targetUser.tag} from staff`,
+			`🐵 Owner command /removestaff used by ${interaction.user.tag}: Removed ${targetUser.tag} from staff`,
+			false
 		);
 	} catch (error) {
 		console.error("Error removing staff:", error);
@@ -76,11 +77,11 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			embeds: [
 				createErrorEmbed(
 					"Error",
-					"An error occurred while removing staff. Please try again later.",
+					"Hold your bananas... something went wonky. Try again, hero!",
 				),
 			],
 		});
-		logger.error(`Error in /removestaff: ${error}`);
+		logger.error(`🐵 Error in /removestaff - the monkeys are having trouble!`, false, error);
 	}
 }
 

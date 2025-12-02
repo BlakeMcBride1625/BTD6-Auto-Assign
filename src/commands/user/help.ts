@@ -42,7 +42,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			"1. Open Bloons TD 6",
 			"2. Go to **Settings** → **Open Data**",
 			"3. Generate an **Open Access Key (OAK)**",
-			"4. Use that OAK with `/link account:<OAK>`",
+			"4. Use that OAK with `/verify account:<OAK>`",
 			"",
 			"**Note:** Your in-game NKID is different from the OAK needed for the API.",
 		].join("\n"),
@@ -52,7 +52,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 	embed.addFields({
 		name: "👤 User Commands",
 		value: [
-			"`/link account:<OAK>` - Link your Ninja Kiwi account (requires OAK)",
+			"`/verify account:<OAK>` - Link your Ninja Kiwi account (requires OAK)",
 			"`/unlink account:<OAK>` - Unlink a Ninja Kiwi account",
 			"`/myaccounts` - View all your linked accounts",
 			"`/myroles` - View your current roles and progression",
@@ -62,16 +62,17 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
 	// Staff commands - only shown to staff
 	if (isStaffUser) {
-		embed.addFields({
-			name: "🛡️ Staff Commands",
-			value: [
-				"`/checkuser user:<User>` - View user's linked accounts and stats",
-				"`/forcelink user:<User> nkid:<OAK>` - Force link an account (removes from previous owner if needed)",
-				"`/forceremove user:<User> [nkid:<OAK>]` - Force remove an account (leave OAK empty to remove all)",
-				"`/forcerolesync user:<User>` - Force role recalculation for a user",
-				"`/listall user:<User>` - List all linked accounts for a user",
-			].join("\n"),
-		});
+			embed.addFields({
+				name: "🛡️ Staff Commands",
+				value: [
+					"`/checkuser user:<User>` - View user's linked accounts and stats",
+					"`/forcelink user:<User> oak:<OAK>` - Force link an account (removes from previous owner if needed)",
+					"`/forceremove user:<User> [oak:<OAK>]` - Force remove an account (leave OAK empty to remove all)",
+					"`/forcerolesync user:<User>` - Force role recalculation for a user",
+					"`/listall user:<User>` - List all linked accounts for a user",
+					"`/updatecontent [totalmaps:<number>] [totalachievements:<number>]` - Update content limits and re-evaluate all users",
+				].join("\n"),
+			});
 	}
 
 	// Owner commands - only shown to owner

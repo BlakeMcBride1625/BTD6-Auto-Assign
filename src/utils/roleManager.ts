@@ -10,11 +10,12 @@ export async function applyRoleChanges(
 	discordId: string,
 	roleDiff: RoleDiff,
 	skipDM = false,
+	silent = false,
 ): Promise<void> {
 	try {
 		const member = await guild.members.fetch(discordId);
 		if (!member) {
-			logger.warn(`Member ${discordId} not found in guild`);
+			logger.warn(`🐵 Member ${discordId} not found in guild - even the monkeys can't find them!`);
 			return;
 		}
 
@@ -34,10 +35,12 @@ export async function applyRoleChanges(
 						await member.roles.add(role);
 						rolesAdded.push(roleId);
 						roleNamesAdded.push(role.name);
-						logger.info(`Added role ${role.name} to ${user.tag}`);
+						if (!silent) {
+							logger.info(`🐵 Added role ${role.name} to ${user.tag} - the monkeys are celebrating!`);
+						}
 					}
 				} catch (error) {
-					logger.error(`Failed to add role ${roleId} to ${user.tag}:`, error);
+					logger.error(`🐵 Failed to add role ${roleId} to ${user.tag} - the monkeys are having trouble!`, false, error);
 				}
 			}
 		}
@@ -51,10 +54,12 @@ export async function applyRoleChanges(
 						await member.roles.remove(role);
 						rolesRemoved.push(roleId);
 						roleNamesRemoved.push(role.name);
-						logger.info(`Removed role ${role.name} from ${user.tag}`);
+						if (!silent) {
+							logger.info(`🐵 Removed role ${role.name} from ${user.tag} - the monkeys have reclaimed it!`);
+						}
 					}
 				} catch (error) {
-					logger.error(`Failed to remove role ${roleId} from ${user.tag}:`, error);
+					logger.error(`🐵 Failed to remove role ${roleId} from ${user.tag} - the monkeys are having trouble!`, false, error);
 				}
 			}
 		}
@@ -62,23 +67,23 @@ export async function applyRoleChanges(
 		// Send DM if roles changed (unless skipDM is true)
 		if (!skipDM && (rolesAdded.length > 0 || rolesRemoved.length > 0)) {
 			try {
-				// Get linked NKIDs for the embed
+				// Get linked OAKs for the embed
 				const prisma = getPrismaClient();
-				const nkAccounts = await prisma.nk_accounts.findMany({
+				const oakAccounts = await prisma.nk_accounts.findMany({
 					where: { discord_id: discordId },
 					select: { nk_id: true },
 				});
-				const nkIds = nkAccounts.map((acc: { nk_id: string }) => acc.nk_id);
+				const oakIds = oakAccounts.map((acc: { nk_id: string }) => acc.nk_id);
 
-				const dmEmbed = createRoleRewardEmbed(user, nkIds, roleNamesAdded, roleNamesRemoved);
+				const dmEmbed = createRoleRewardEmbed(user, oakIds, roleNamesAdded, roleNamesRemoved);
 				await sendDMWithAutoDelete(user, [dmEmbed]);
 			} catch (error) {
 				// User might have DMs disabled, that's okay
-				logger.warn(`Could not send DM to ${user.tag}:`, error);
+				logger.warn(`🐵 Could not send DM to ${user.tag} - the monkeys tried but couldn't reach them!`, false, error);
 			}
 		}
 	} catch (error) {
-		logger.error(`Error applying role changes for ${discordId}:`, error);
+		logger.error(`🐵 Error applying role changes for ${discordId} - the monkeys are having trouble!`, false, error);
 		throw error;
 	}
 }
@@ -91,7 +96,7 @@ export async function getCurrentRoles(guild: Guild, discordId: string): Promise<
 		}
 		return member.roles.cache.map((role: Role) => role.id);
 	} catch (error) {
-		logger.error(`Error getting current roles for ${discordId}:`, error);
+		logger.error(`🐵 Error getting current roles for ${discordId} - the monkeys are confused!`, false, error);
 		return [];
 	}
 }

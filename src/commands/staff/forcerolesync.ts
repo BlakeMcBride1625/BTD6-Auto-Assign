@@ -84,7 +84,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
 		// Log to log channel
 		logger.info(
-			`Staff command /forcerolesync used by ${interaction.user.tag} on ${targetUser.tag}`,
+			`🐵 Staff command /forcerolesync used by ${interaction.user.tag} on ${targetUser.tag}`,
+			false
 		);
 	} catch (error) {
 		console.error("Error force syncing roles:", error);
@@ -92,11 +93,11 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			embeds: [
 				createErrorEmbed(
 					"Error",
-					"An error occurred while syncing roles. Please try again later.",
+					"Hold your bananas... something went wonky. Try again, hero!",
 				),
 			],
 		});
-		logger.error(`Error in /forcerolesync: ${error}`);
+		logger.error(`🐵 Error in /forcerolesync - the monkeys are having trouble!`, false, error);
 	}
 }
 

@@ -71,7 +71,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
 		// Log to log channel
 		logger.info(
-			`Owner command /addstaff used by ${interaction.user.tag}: Added ${targetUser.tag} as staff`,
+			`🐵 Owner command /addstaff used by ${interaction.user.tag}: Added ${targetUser.tag} as staff`,
+			false
 		);
 	} catch (error) {
 		console.error("Error adding staff:", error);
@@ -79,11 +80,11 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			embeds: [
 				createErrorEmbed(
 					"Error",
-					"An error occurred while adding staff. Please try again later.",
+					"Hold your bananas... something went wonky. Try again, hero!",
 				),
 			],
 		});
-		logger.error(`Error in /addstaff: ${error}`);
+		logger.error(`🐵 Error in /addstaff - the monkeys are having trouble!`, false, error);
 	}
 }
 

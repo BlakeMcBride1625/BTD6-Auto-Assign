@@ -6,7 +6,7 @@ interface DiscordConfig {
 	token: string;
 	clientId: string;
 	guildId: string;
-	ownerId: string;
+	ownerIds: string[];
 	roles: {
 		fastMonkey: string;
 		bossSlayer: string;
@@ -19,6 +19,7 @@ interface DiscordConfig {
 	channels: {
 		logs: string;
 	};
+	flaggedModdedPlayer?: string;
 }
 
 interface NKConfig {
@@ -66,12 +67,19 @@ function getEnvNumber(key: string, defaultValue?: number): number {
 	return num;
 }
 
+function getEnvOptional(key: string): string | undefined {
+	return process.env[key];
+}
+
 const config: Config = {
 	discord: {
 		token: getEnv("DISCORD_TOKEN"),
 		clientId: getEnv("DISCORD_CLIENT_ID"),
 		guildId: getEnv("DISCORD_GUILD_ID"),
-		ownerId: getEnv("DISCORD_OWNER_ID"),
+		ownerIds: getEnv("DISCORD_OWNER_ID")
+			.split(",")
+			.map(id => id.trim())
+			.filter(id => id.length > 0),
 		roles: {
 			fastMonkey: getEnv("ROLE_FAST_MONKEY"),
 			bossSlayer: getEnv("ROLE_BOSS_SLAYER"),
@@ -84,6 +92,7 @@ const config: Config = {
 		channels: {
 			logs: getEnv("CHANNEL_LOGS"),
 		},
+		flaggedModdedPlayer: getEnvOptional("FLAGGED_MODDED_PLAYER"),
 	},
 	nk: {
 		apiBase: getEnv("NK_API_BASE"),

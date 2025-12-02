@@ -3,6 +3,7 @@ import config from "../config/config.js";
 import { getPlayerData } from "../nk/cache.js";
 import { evaluateAllRoles } from "./requirements.js";
 import type { NKPlayerResponse } from "../nk/types.js";
+import { getContentLimits } from "../utils/contentChecker.js";
 
 export interface RoleDiff {
 	rolesToAdd: string[];
@@ -25,7 +26,7 @@ export async function evaluateUserRoles(
 ): Promise<RoleDiff> {
 	const prisma = getPrismaClient();
 
-	// Get all linked NKIDs for this user
+	// Get all linked OAKs for this user
 	const nkAccounts = await prisma.nk_accounts.findMany({
 		where: { discord_id: discordId },
 	});
@@ -38,7 +39,7 @@ export async function evaluateUserRoles(
 		};
 	}
 
-	// Fetch player data for all NKIDs
+	// Fetch player data for all OAKs
 	const playerDataPromises = nkAccounts.map((account: { nk_id: string }) =>
 		getPlayerData(account.nk_id, forceRefresh),
 	);
@@ -92,7 +93,7 @@ export async function evaluateUserRoles(
 		blackBordersSolo: 0,
 		blackBordersCoop: 0,
 		achievementsUnlocked: latestData?.achievements ?? 0,
-		totalAchievements: 153, // Current total
+		totalAchievements: getContentLimits().totalAchievements,
 	};
 
 	return {

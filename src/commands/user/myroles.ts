@@ -29,7 +29,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 				embeds: [
 					createErrorEmbed(
 						"No Accounts Linked",
-						"You don't have any Ninja Kiwi accounts linked. Use `/link` to link an account.",
+						"You don't have any Ninja Kiwi accounts linked. Use `/verify` to link an account.",
 					),
 				],
 			});

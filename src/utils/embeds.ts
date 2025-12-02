@@ -42,7 +42,7 @@ export function createInfoEmbed(title: string, description?: string): EmbedBuild
 
 export function createRoleRewardEmbed(
 	user: User,
-	nkIds: string[],
+	oakIds: string[],
 	roleNamesAdded: string[],
 	roleNamesRemoved: string[],
 ): EmbedBuilder {
@@ -54,11 +54,11 @@ export function createRoleRewardEmbed(
 		.setColor(EmbedColor.Success)
 		.setTimestamp();
 
-	// Add NKID info
-	if (nkIds.length > 0) {
+	// Add OAK info
+	if (oakIds.length > 0) {
 		embed.addFields({
 			name: "Linked Account(s)",
-			value: nkIds.map((id) => `\`${id}\``).join("\n"),
+			value: oakIds.map((id) => `\`${id}\``).join("\n"),
 			inline: false,
 		});
 	}

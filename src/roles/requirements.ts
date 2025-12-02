@@ -1,7 +1,5 @@
 import type { NKPlayerResponse } from "../nk/types.js";
-
-// Total maps in BTD6 (approximately, may need updating)
-const TOTAL_MAPS_COUNT = 82; // Approximate total maps
+import { getContentLimits } from "../utils/contentChecker.js";
 
 // Fast Monkey: Race rank <= 50
 // Using medal counts as proxy since API doesn't provide direct rank
@@ -44,10 +42,11 @@ export function checkExpertCompletionist(data: NKPlayerResponse | undefined): bo
 	
 	// If they have black CHIMPS on all or nearly all maps, they likely have all expert maps
 	// This is an approximation - ideally we'd check per-map data
-	return chimpsBlack >= TOTAL_MAPS_COUNT;
+	const { totalMaps } = getContentLimits();
+	return chimpsBlack >= totalMaps;
 }
 
-// Advanced Completionist: >= 25 solo black CHIMPS medals (summed across NKIDs)
+// Advanced Completionist: >= 25 solo black CHIMPS medals (summed across OAKs)
 export function checkAdvancedCompletionist(allData: NKPlayerResponse[]): boolean {
 	let totalBlackChimps = 0;
 
@@ -72,7 +71,8 @@ export function checkGrandmaster(data: NKPlayerResponse | undefined): boolean {
 	
 	// If they have black CHIMPS on all maps, they likely have black borders on all maps
 	// This is an approximation - ideally we'd check per-map black border data
-	return chimpsBlack >= TOTAL_MAPS_COUNT;
+	const { totalMaps } = getContentLimits();
+	return chimpsBlack >= totalMaps;
 }
 
 // The Dart Lord: Black border on all maps (solo + co-op)
@@ -87,16 +87,18 @@ export function checkTheDartLord(data: NKPlayerResponse | undefined): boolean {
 	
 	// If they have black CHIMPS on all maps in both solo and co-op, they likely have black borders
 	// This is an approximation
-	return soloChimpsBlack >= TOTAL_MAPS_COUNT && coopChimpsBlack >= TOTAL_MAPS_COUNT;
+	const { totalMaps } = getContentLimits();
+	return soloChimpsBlack >= totalMaps && coopChimpsBlack >= totalMaps;
 }
 
-// All Achievements: All BTD6 achievements unlocked on at least one NKID
+// All Achievements: All BTD6 achievements unlocked on at least one OAK
 export function checkAllAchievements(data: NKPlayerResponse | undefined): boolean {
 	if (!data) {
 		return false;
 	}
-	// Total BTD6 achievements is currently 153
-	return (data.achievements ?? 0) >= 153;
+	// Use dynamic total achievements from content checker
+	const { totalAchievements } = getContentLimits();
+	return (data.achievements ?? 0) >= totalAchievements;
 }
 
 export interface RoleCheckResult {

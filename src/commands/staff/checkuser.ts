@@ -115,18 +115,18 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 		await interaction.editReply({ embeds: [embed] });
 
 		// Log to log channel
-		logger.info(`Staff command /checkuser used by ${interaction.user.tag} on ${targetUser.tag}`);
+		logger.info(`🐵 Staff command /checkuser used by ${interaction.user.tag} on ${targetUser.tag}`, false);
 	} catch (error) {
 		console.error("Error checking user:", error);
 		await interaction.editReply({
 			embeds: [
 				createErrorEmbed(
 					"Error",
-					"An error occurred while checking the user. Please try again later.",
+					"Hold your bananas... something went wonky. Try again, hero!",
 				),
 			],
 		});
-		logger.error(`Error in /checkuser: ${error}`);
+		logger.error(`🐵 Error in /checkuser - the monkeys are having trouble!`, false, error);
 	}
 }
 

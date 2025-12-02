@@ -3,7 +3,7 @@ import config from "../config/config.js";
 import { getPrismaClient } from "../database/client.js";
 
 export function isOwner(userId: string): boolean {
-	return userId === config.discord.ownerId;
+	return config.discord.ownerIds.includes(userId);
 }
 
 export async function isStaff(userId: string): Promise<boolean> {

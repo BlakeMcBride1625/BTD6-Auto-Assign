@@ -1,3 +1,27 @@
+// NK API response wrapper
+export interface NKAPIResponse {
+	success?: boolean;
+	error?: string | null;
+	body?: NKPlayerResponse;
+	model?: {
+		name?: string;
+		parameters?: {
+			achievements?: {
+				description?: string;
+				type?: string;
+			};
+			[key: string]: unknown;
+		};
+		[key: string]: unknown;
+	};
+	next?: string | null;
+	prev?: string | null;
+	// NOTE: The API does NOT provide totalMaps or totalAchievements as metadata.
+	// These must be inferred from player data (max CHIMPS-BLACK count = total maps,
+	// max achievements count = total achievements).
+	[key: string]: unknown; // Allow other fields
+}
+
 // Actual NK API response structure
 export interface NKPlayerResponse {
 	displayName?: string;

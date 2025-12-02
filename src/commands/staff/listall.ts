@@ -66,7 +66,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
 		// Log to log channel
 		logger.info(
-			`Staff command /listall used by ${interaction.user.tag} on ${targetUser.tag}`,
+			`🐵 Staff command /listall used by ${interaction.user.tag} on ${targetUser.tag}`,
+			false
 		);
 	} catch (error) {
 		console.error("Error listing accounts:", error);
@@ -74,11 +75,11 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			embeds: [
 				createErrorEmbed(
 					"Error",
-					"An error occurred while listing accounts. Please try again later.",
+					"Hold your bananas... something went wonky. Try again, hero!",
 				),
 			],
 		});
-		logger.error(`Error in /listall: ${error}`);
+		logger.error(`🐵 Error in /listall - the monkeys are having trouble!`, false, error);
 	}
 }
 

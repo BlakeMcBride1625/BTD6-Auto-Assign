@@ -4,7 +4,7 @@ import {
 } from "discord.js";
 import { getPrismaClient } from "../../database/client.js";
 import { evaluateUserRoles } from "../../roles/evaluateRoles.js";
-import { validateNKID, sanitizeNKID } from "../../utils/validation.js";
+import { validateOAK, sanitizeOAK } from "../../utils/validation.js";
 import {
 	createSuccessEmbed,
 	createErrorEmbed,
@@ -26,11 +26,11 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
 	await interaction.deferReply({ ephemeral: true });
 
-	const nkId = sanitizeNKID(interaction.options.getString("account", true));
+	const oak = sanitizeOAK(interaction.options.getString("account", true));
 
-	if (!validateNKID(nkId)) {
+	if (!validateOAK(oak)) {
 		await interaction.editReply({
-			embeds: [createErrorEmbed("Invalid NKID", "Please provide a valid Ninja Kiwi account ID.")],
+			embeds: [createErrorEmbed("Invalid OAK", "Whoa there, that's not a valid OAK. Even Quincy never misses, but this one sure did!")],
 		});
 		return;
 	}
@@ -43,7 +43,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 		const account = await prisma.nk_accounts.findFirst({
 			where: {
 				discord_id: discordId,
-				nk_id: nkId,
+				nk_id: oak,
 			},
 		});
 
@@ -52,7 +52,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 				embeds: [
 					createErrorEmbed(
 						"Account Not Found",
-						"This NKID is not linked to your Discord account.",
+						"That OAK doesn't look quite right... even the Dart Monkey is confused! This OAK is not linked to your Discord account.",
 					),
 				],
 			});
@@ -76,7 +76,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			where: { discord_id: discordId },
 			select: { nk_id: true },
 		});
-		const remainingNkIds = remainingAccounts.map((acc) => acc.nk_id);
+		const remainingOaks = remainingAccounts.map((acc) => acc.nk_id);
 
 		// Get role names and mentions for embed and logging
 		const roleNames: string[] = [];
@@ -105,10 +105,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 		});
 
 		// Add remaining linked accounts (OAK IDs) - only in DMs
-		if (remainingNkIds.length > 0) {
+		if (remainingOaks.length > 0) {
 			embed.addFields({
 				name: "Remaining Linked Account(s)",
-				value: remainingNkIds.map((id) => `\`${id}\``).join("\n"),
+				value: remainingOaks.map((id) => `\`${id}\``).join("\n"),
 				inline: false,
 			});
 		}
@@ -140,7 +140,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			embeds: [
 				createErrorEmbed(
 					"Error",
-					"An error occurred while unlinking your account. Please try again later.",
+					"Hold your bananas... something went wonky with that OAK. Try again, hero!",
 				),
 			],
 		});

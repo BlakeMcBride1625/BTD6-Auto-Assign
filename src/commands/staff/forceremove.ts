@@ -5,7 +5,7 @@ import {
 import { getPrismaClient } from "../../database/client.js";
 import { evaluateUserRoles } from "../../roles/evaluateRoles.js";
 import { hasStaffAccess } from "../../utils/permissions.js";
-import { validateNKID, sanitizeNKID } from "../../utils/validation.js";
+import { validateOAK, sanitizeOAK } from "../../utils/validation.js";
 import { createSuccessEmbed, createErrorEmbed } from "../../utils/embeds.js";
 import { logger } from "../../utils/logger.js";
 import { applyRoleChanges } from "../../utils/roleManager.js";
@@ -21,7 +21,7 @@ export const data = new SlashCommandBuilder()
 	)
 	.addStringOption((option) =>
 		option
-			.setName("nkid")
+			.setName("oak")
 			.setDescription("The Open Access Key (OAK) to remove (leave empty to remove all)")
 			.setRequired(false),
 	);
@@ -37,12 +37,12 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 	}
 
 	const targetUser = interaction.options.getUser("user", true);
-	const nkIdInput = interaction.options.getString("nkid", false);
+	const oakInput = interaction.options.getString("oak", false);
 	const prisma = getPrismaClient();
 
 	try {
 		// If no OAK provided, remove all accounts
-		if (!nkIdInput) {
+		if (!oakInput) {
 			const allAccounts = await prisma.nk_accounts.findMany({
 				where: { discord_id: targetUser.id },
 			});
@@ -95,15 +95,16 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
 			// Log to log channel
 			logger.info(
-				`Staff command /forceremove used by ${interaction.user.tag}: Removed all ${allAccounts.length} account(s) from ${targetUser.tag}`,
+				`🐵 Staff command /forceremove used by ${interaction.user.tag}: Removed all ${allAccounts.length} account(s) from ${targetUser.tag}`,
+				false
 			);
 			return;
 		}
 
 		// Single account removal (existing logic)
-		const nkId = sanitizeNKID(nkIdInput);
+		const oak = sanitizeOAK(oakInput);
 
-		if (!validateNKID(nkId)) {
+		if (!validateOAK(oak)) {
 			await interaction.editReply({
 				embeds: [createErrorEmbed("Invalid OAK", "Please provide a valid Open Access Key (OAK).")],
 			});
@@ -113,7 +114,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 		const account = await prisma.nk_accounts.findFirst({
 			where: {
 				discord_id: targetUser.id,
-				nk_id: nkId,
+				nk_id: oak,
 			},
 		});
 
@@ -165,7 +166,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
 		// Log to log channel
 		logger.info(
-			`Staff command /forceremove used by ${interaction.user.tag}: Removed account from ${targetUser.tag}`,
+			`🐵 Staff command /forceremove used by ${interaction.user.tag}: Removed account from ${targetUser.tag}`,
+			false
 		);
 	} catch (error) {
 		console.error("Error force removing account:", error);
@@ -173,11 +175,11 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			embeds: [
 				createErrorEmbed(
 					"Error",
-					"An error occurred while force removing the account. Please try again later.",
+					"Hold your bananas... something went wonky with that OAK. Try again, hero!",
 				),
 			],
 		});
-		logger.error(`Error in /forceremove: ${error}`);
+		logger.error(`🐵 Error in /forceremove - the monkeys are having trouble!`, false, error);
 	}
 }
 

@@ -4,8 +4,10 @@ import { evaluateUserRoles } from "../roles/evaluateRoles.js";
 import { applyRoleChanges } from "./roleManager.js";
 import { logger } from "./logger.js";
 import config from "../config/config.js";
+import { checkForNewContent, reEvaluateAllUsersOnNewContent } from "./contentChecker.js";
 
 let syncInterval: NodeJS.Timeout | null = null;
+let dailyContentCheckInterval: NodeJS.Timeout | null = null;
 
 export function startScheduledSync(client: Client): void {
 	if (syncInterval) {
@@ -14,37 +16,83 @@ export function startScheduledSync(client: Client): void {
 
 	const intervalMs = config.sync.interval * 60 * 1000; // Convert minutes to milliseconds
 
-	logger.info(`Starting scheduled sync (interval: ${config.sync.interval} minutes)`);
+	logger.info(`🐵 Starting scheduled monkey sync (interval: ${config.sync.interval} minutes)`, false);
 
+	// Scheduled syncs should be silent (no Discord logs) - only log errors
 	syncInterval = setInterval(async () => {
-		await runSync(client);
+		await runSync(client, true);
 	}, intervalMs);
 
-	// Run initial sync after a short delay
-	setTimeout(() => runSync(client), 5000);
+	// Run initial sync after a short delay (silent - no Discord log channel messages)
+	setTimeout(() => runSync(client, true), 5000);
+
+	// Start daily content check (runs once per day)
+	startDailyContentCheck(client);
 }
 
 export function stopScheduledSync(): void {
 	if (syncInterval) {
 		clearInterval(syncInterval);
 		syncInterval = null;
-		logger.info("Stopped scheduled sync");
+		logger.info("🐵 Stopped scheduled monkey sync", false);
+	}
+	if (dailyContentCheckInterval) {
+		clearInterval(dailyContentCheckInterval);
+		dailyContentCheckInterval = null;
+		logger.info("🐵 Stopped daily content check", false);
 	}
 }
 
-async function runSync(client: Client): Promise<void> {
+function startDailyContentCheck(client: Client): void {
+	if (dailyContentCheckInterval) {
+		clearInterval(dailyContentCheckInterval);
+	}
+
+	// Run once per day (24 hours = 24 * 60 * 60 * 1000 ms)
+	const dailyIntervalMs = 24 * 60 * 60 * 1000;
+
+	logger.info("🐵 Starting daily content check (runs once per day)", false);
+
+	// Run initial check after a short delay
+	setTimeout(async () => {
+		await runDailyContentCheck(client);
+	}, 10000); // 10 seconds after bot starts
+
+	// Then run every 24 hours
+	dailyContentCheckInterval = setInterval(async () => {
+		await runDailyContentCheck(client);
+	}, dailyIntervalMs);
+}
+
+async function runDailyContentCheck(client: Client): Promise<void> {
+	try {
+		logger.info("🐵 Running daily content check...", false);
+		const hasNewContent = await checkForNewContent();
+		
+		if (hasNewContent) {
+			logger.info("🐵 New content detected! Re-evaluating all users...", false);
+			await reEvaluateAllUsersOnNewContent(client);
+		}
+	} catch (error) {
+		logger.error("🐵 Error in daily content check - the monkeys are confused!", false, error);
+	}
+}
+
+async function runSync(client: Client, silent = false): Promise<void> {
 	const prisma = getPrismaClient();
 	const guild = await client.guilds.fetch(config.discord.guildId);
 
 	if (!guild) {
-		logger.error("Guild not found for scheduled sync");
+		logger.error("🐵 Guild not found for scheduled monkey sync - even the monkeys are confused!", false);
 		return;
 	}
 
-	logger.info("Starting scheduled role sync...");
+	if (!silent) {
+		logger.info("🐵 Starting scheduled monkey role sync...", false);
+	}
 
 	try {
-		// Get all users with linked NKIDs
+		// Get all users with linked OAKs
 		const users = await prisma.users.findMany({
 			include: {
 				nk_accounts: true,
@@ -71,9 +119,9 @@ async function runSync(client: Client): Promise<void> {
 					// If we can't fetch member, use ID
 				}
 
-				await applyRoleChanges(guild, user.discord_id, roleDiff);
+				await applyRoleChanges(guild, user.discord_id, roleDiff, false, silent);
 
-				if (roleDiff.rolesToAdd.length > 0 || roleDiff.rolesToRemove.length > 0) {
+				if (!silent && (roleDiff.rolesToAdd.length > 0 || roleDiff.rolesToRemove.length > 0)) {
 					// Get role mentions for logging
 					const roleMentionsAdded: string[] = [];
 					const roleMentionsRemoved: string[] = [];
@@ -88,8 +136,10 @@ async function runSync(client: Client): Promise<void> {
 					const addedText = roleMentionsAdded.length > 0 ? roleMentionsAdded.join(" ") : "None";
 					const removedText = roleMentionsRemoved.length > 0 ? roleMentionsRemoved.join(" ") : "None";
 					
+					// Only log to Discord if not silent (initial sync on restart should be silent)
 					logger.info(
 						`Sync: Updated roles for ${username} - Added: ${addedText}, Removed: ${removedText}`,
+						silent
 					);
 				}
 
@@ -104,14 +154,17 @@ async function runSync(client: Client): Promise<void> {
 				} catch {
 					// If we can't fetch member, use ID
 				}
-				logger.error(`Error syncing roles for user ${username}:`, error);
+				logger.error(`🐵 Error syncing roles for user ${username} - the monkeys are having trouble!`, false, error);
 				// Continue with next user even if one fails
 			}
 		}
 
-		logger.info(`Scheduled sync complete: ${processed} users processed, ${errors} errors`);
+		// Only log completion if there were errors (even in silent mode, errors should be logged)
+		if (errors > 0) {
+			logger.warn(`🐵 Scheduled monkey sync complete with ${errors} error(s): ${processed} users processed`, false);
+		}
 	} catch (error) {
-		logger.error("Error in scheduled sync:", error);
+		logger.error("🐵 Error in scheduled monkey sync - the monkeys are confused!", false, error);
 	}
 }
 

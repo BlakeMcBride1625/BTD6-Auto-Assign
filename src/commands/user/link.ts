@@ -2,10 +2,11 @@ import {
 	ChatInputCommandInteraction,
 	SlashCommandBuilder,
 } from "discord.js";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { getPrismaClient } from "../../database/client.js";
 import { getPlayerData } from "../../nk/cache.js";
 import { evaluateUserRoles } from "../../roles/evaluateRoles.js";
-import { validateNKID, sanitizeNKID } from "../../utils/validation.js";
+import { validateOAK, sanitizeOAK } from "../../utils/validation.js";
 import {
 	createSuccessEmbed,
 	createErrorEmbed,
@@ -16,7 +17,7 @@ import { logger } from "../../utils/logger.js";
 import { sendDMWithAutoDelete } from "../../utils/dmManager.js";
 
 export const data = new SlashCommandBuilder()
-	.setName("link")
+	.setName("verify")
 	.setDescription("Link your Ninja Kiwi account to your Discord account")
 	.addStringOption((option) =>
 		option
@@ -28,99 +29,153 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
 	await interaction.deferReply({ ephemeral: true });
 
-	const nkId = sanitizeNKID(interaction.options.getString("account", true));
+	const oak = sanitizeOAK(interaction.options.getString("account", true));
 
-	if (!validateNKID(nkId)) {
+	if (!validateOAK(oak)) {
 		await interaction.editReply({
-			embeds: [createErrorEmbed("Invalid NKID", "Please provide a valid Ninja Kiwi account ID.")],
+			embeds: [createErrorEmbed("Invalid OAK", "Whoa there, that's not a valid OAK. Even Quincy never misses, but this one sure did!")],
 		});
 		return;
 	}
 
 	const discordId = interaction.user.id;
 
-	try {
-		const prisma = getPrismaClient();
-		
-		// Check if NKID is already linked to another user
-		const existingAccount = await prisma.nk_accounts.findUnique({
-			where: { nk_id: nkId },
-			include: { user: true },
-		});
-
-		if (existingAccount && existingAccount.discord_id !== discordId) {
-			await interaction.editReply({
-				embeds: [
-					createErrorEmbed(
-						"Account Already Linked",
-						`This NKID is already linked to another Discord account. Each NKID can only be linked to one Discord account.`,
-					),
-				],
-			});
-			return;
-		}
-
-		// Check if user already has this NKID linked
-		const userAccount = await prisma.nk_accounts.findFirst({
-			where: {
-				discord_id: discordId,
-				nk_id: nkId,
-			},
-		});
-
-		if (userAccount) {
-			await interaction.editReply({
-				embeds: [
-					createWarningEmbed(
-						"Already Linked",
-						"This NKID is already linked to your account.",
-					),
-				],
-			});
-			return;
-		}
-
-		// Fetch player data from API
-		const playerData = await getPlayerData(nkId, true);
+	// Fetch player data from API first (before transaction to avoid holding lock)
+	const playerData = await getPlayerData(oak, true);
 
 		if (!playerData) {
 			await interaction.editReply({
 				embeds: [
 					createErrorEmbed(
 						"Account Not Found",
-						"Could not find a player with that ID. The API requires:\n\n**You need an Open Access Key (OAK), not just your NKID!**\n\n**How to get your OAK:**\n1. Open BTD6\n2. Go to Settings → Open Data\n3. Generate an Open Access Key (OAK)\n4. Use that OAK (not your regular NKID) with `/link`\n\n**Note:** The in-game NKID is different from the OAK needed for the API.",
+						"That OAK doesn't look quite right... even the Dart Monkey is confused!\n\n**You need an Open Access Key (OAK), not just your NKID!**\n\n**How to get your OAK:**\n1. Open BTD6\n2. Go to Settings → Open Data\n3. Generate an Open Access Key (OAK)\n4. Use that OAK (not your regular NKID) with `/verify`\n\n**Note:** The in-game NKID is different from the OAK needed for the API.",
 					),
 				],
 			});
 			return;
 		}
 
-		// Create or update user
-		await prisma.users.upsert({
-			where: { discord_id: discordId },
-			update: {},
-			create: { discord_id: discordId },
+	try {
+		const prisma = getPrismaClient();
+
+		// Use transaction to atomically check and create, preventing race conditions
+		await prisma.$transaction(async (tx) => {
+			// Check if OAK is already linked to another user
+			const existingAccount = await tx.nk_accounts.findUnique({
+				where: { nk_id: oak },
+			});
+
+			if (existingAccount) {
+				if (existingAccount.discord_id !== discordId) {
+					throw new Error("ALREADY_LINKED_OTHER");
+				}
+				// Same user, already linked
+				throw new Error("ALREADY_LINKED_SELF");
+			}
+
+			// Create or update user
+			await tx.users.upsert({
+				where: { discord_id: discordId },
+				update: {},
+				create: { discord_id: discordId },
+			});
+
+			// Link OAK - this will fail with unique constraint if race condition occurs
+			await tx.nk_accounts.create({
+				data: {
+					discord_id: discordId,
+					nk_id: oak,
+					display_name: playerData.displayName ?? null,
+				},
+			});
 		});
 
-		// Link NKID
-		await prisma.nk_accounts.create({
-			data: {
-				discord_id: discordId,
-				nk_id: nkId,
-				display_name: playerData.displayName ?? null,
-			},
+	} catch (error) {
+		// Handle specific error cases
+		if (error instanceof Error) {
+			if (error.message === "ALREADY_LINKED_OTHER") {
+				await interaction.editReply({
+					embeds: [
+						createErrorEmbed(
+							"Account Already Linked",
+							`Naughty Naughty... that OAK is already linked to another player's Discord. No double-banana dipping allowed, silly monkey!`,
+						),
+					],
+				});
+				return;
+			}
+			if (error.message === "ALREADY_LINKED_SELF") {
+				await interaction.editReply({
+					embeds: [
+						createWarningEmbed(
+							"Already Linked",
+							"This OAK is already bonded tighter than a Glue Monkey. Pick another!",
+						),
+					],
+				});
+				return;
+			}
+		}
+
+		// Handle Prisma unique constraint violation (race condition caught by DB)
+		if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+			// Check which account actually has it now
+			const prisma = getPrismaClient();
+			const existingAccount = await prisma.nk_accounts.findUnique({
+				where: { nk_id: oak },
+			});
+
+			if (existingAccount && existingAccount.discord_id !== discordId) {
+				await interaction.editReply({
+					embeds: [
+						createErrorEmbed(
+							"Account Already Linked",
+							`Naughty Naughty... that OAK is already linked to another player's Discord. No double-banana dipping allowed, silly monkey!`,
+						),
+					],
+				});
+				return;
+			}
+
+			// Same user somehow (shouldn't happen, but handle gracefully)
+			await interaction.editReply({
+				embeds: [
+					createWarningEmbed(
+						"Already Linked",
+						"This OAK is already bonded tighter than a Glue Monkey. Pick another!",
+					),
+				],
+			});
+			return;
+		}
+
+		// Generic error handling
+		console.error("Error linking account:", error);
+		await interaction.editReply({
+			embeds: [
+				createErrorEmbed(
+					"Error",
+					"Hold your bananas... something went wonky with that OAK. Try again, hero!",
+				),
+			],
 		});
+		logger.error(`🐵 Error in /verify - the monkeys are having trouble!`, false, error);
+		return;
+	}
+
+	try {
+		const prisma = getPrismaClient();
 
 		// Evaluate and apply roles (skip automatic DM, we'll send combined one)
 		const roleDiff = await evaluateUserRoles(discordId, true);
 		await applyRoleChanges(interaction.guild!, discordId, roleDiff, true);
 
-		// Get linked NKIDs for the combined embed
-		const nkAccounts = await prisma.nk_accounts.findMany({
+		// Get linked OAKs for the combined embed
+		const oakAccounts = await prisma.nk_accounts.findMany({
 			where: { discord_id: discordId },
 			select: { nk_id: true },
 		});
-		const nkIds = nkAccounts.map((acc: { nk_id: string }) => acc.nk_id);
+		const oakIds = oakAccounts.map((acc: { nk_id: string }) => acc.nk_id);
 
 		// Get role names and mentions for embed and logging
 		const roleNames: string[] = [];
@@ -149,10 +204,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 		});
 
 		// Add linked accounts (OAK IDs) - only in DMs
-		if (nkIds.length > 0) {
+		if (oakIds.length > 0) {
 			combinedEmbed.addFields({
 				name: "Linked Account(s)",
-				value: nkIds.map((id) => `\`${id}\``).join("\n"),
+				value: oakIds.map((id) => `\`${id}\``).join("\n"),
 				inline: false,
 			});
 		}
@@ -213,15 +268,16 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 		const displayName = playerData.displayName || "Unknown";
 		logger.logAccountLinked(interaction.user, displayName, roleMentions);
 	} catch (error) {
-		console.error("Error linking account:", error);
+		console.error("Error in post-link operations:", error);
 		await interaction.editReply({
 			embeds: [
 				createErrorEmbed(
 					"Error",
-					"An error occurred while linking your account. Please try again later.",
+					"Account was linked, but an error occurred during role evaluation. Please contact staff.",
 				),
 			],
 		});
+		logger.error(`🐵 Error in post-link operations - the monkeys are having trouble!`, false, error);
 	}
 }
 
