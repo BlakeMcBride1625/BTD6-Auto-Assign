@@ -1,3 +1,18 @@
+/**
+ * Copyright (c) 2025 Blake McBride (blakemcbride1625)
+ * All Rights Reserved
+ * 
+ * EpildevConnect Ltd is a trademark of Blake McBride.
+ * 
+ * This code is proprietary and confidential. Unauthorised copying, modification,
+ * distribution, or use of this software, via any medium, is strictly prohibited
+ * without the express written permission of Blake McBride.
+ * 
+ * Contact:
+ *   - GitHub: blakemcbride1625
+ *   - Discord: epildev
+ */
+
 import config from "../config/config.js";
 import type { NKPlayerResponse, NKAPIResponse } from "./types.js";
 
