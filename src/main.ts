@@ -20,6 +20,7 @@ import { setDiscordClient, logger } from "./utils/logger.js";
 import { startScheduledSync, stopScheduledSync } from "./utils/scheduler.js";
 import { sendDMWithAutoDelete } from "./utils/dmManager.js";
 import { createErrorEmbed } from "./utils/embeds.js";
+import { validateApiKey } from "./utils/apiValidation.js";
 import { readdirSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -89,6 +90,10 @@ async function registerCommands(): Promise<void> {
 // Initialize bot
 async function initialize(): Promise<void> {
 	try {
+		// Validate API key first - bot won't work without it
+		logger.info("Validating API key...", false);
+		await validateApiKey(config.api.key);
+		
 		// Test database connection
 		const prisma = getPrismaClient();
 		await prisma.$connect();

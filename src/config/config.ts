@@ -57,6 +57,9 @@ export interface Config {
 	database: {
 		url: string;
 	};
+	api: {
+		key: string;
+	};
 }
 
 function getEnv(key: string): string {
@@ -120,6 +123,9 @@ const config: Config = {
 	},
 	database: {
 		url: getEnv("DATABASE_URL"),
+	},
+	api: {
+		key: getEnv("BTD6_API_KEY"),
 	},
 };
 

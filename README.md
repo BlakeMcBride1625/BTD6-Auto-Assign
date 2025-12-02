@@ -36,6 +36,7 @@ A Discord bot that automatically manages roles based on Bloons TD 6 (BTD6) achie
 - Discord Bot Token
 - Discord Application with Bot scope
 - Open Access Key (OAK) from BTD6
+- **API Key from EpildevConnect API** (required - bot will not start without it)
 
 ### Getting Your OAK (Open Access Key)
 
@@ -47,6 +48,28 @@ A Discord bot that automatically manages roles based on Bloons TD 6 (BTD6) achie
 4. Use that OAK with `/verify account:<OAK>`
 
 **Note:** Your in-game account ID is different from the OAK needed for the API.
+
+## ⚠️ Important: API Key Required
+
+**This bot requires a valid API key from the EpildevConnect API to function. The bot will not start without a valid API key.**
+
+### Getting Your API Key
+
+1. **Contact EpildevConnect** via Discord (`epildev`) or email (`connectwithme@epildevconnect.uk`) to request an API key
+2. **Or use the EpildevConnect API management Discord bot** (if you have access)
+3. **Generate an API key** for the `btd6` project
+4. **Add the key to your `.env` file** as `BTD6_API_KEY`
+5. **The bot validates the key on startup** - if invalid or missing, the bot will exit immediately
+
+### API Key Validation
+
+The bot performs API key validation on startup:
+- ✅ **Valid key**: Bot starts normally
+- ❌ **Missing key**: Bot exits with error message
+- ❌ **Invalid key**: Bot exits with error message
+- ❌ **API unreachable**: Bot exits after timeout (10 seconds)
+
+**The bot will not function without a valid API key.** This is a security requirement to ensure only authorized instances can run.
 
 ## Quick Start
 
@@ -112,6 +135,9 @@ npm run dev
 Required environment variables:
 
 ```env
+# API Key (REQUIRED - Bot will not start without this)
+BTD6_API_KEY=your_api_key_here
+
 # Discord Configuration
 DISCORD_TOKEN=your_bot_token
 DISCORD_CLIENT_ID=your_client_id
@@ -304,6 +330,25 @@ All logs are sent as rich embeds with timestamps and appropriate colours (blue f
 
 ## Troubleshooting
 
+### Bot won't start / Exits immediately
+
+**Most common cause: Missing or invalid API key**
+
+1. **Check your `.env` file** - Ensure `BTD6_API_KEY` is set
+2. **Verify the API key is valid** - Check logs for validation errors
+3. **Test the API key manually:**
+   ```bash
+   curl "https://api.epildevconnect.uk/api/btd6/validate?key=YOUR_KEY_HERE"
+   ```
+   Should return: `{"valid": true}`
+4. **Check API connectivity** - Ensure the bot can reach `https://api.epildevconnect.uk`
+5. **Generate a new key** if the current one is invalid or revoked
+
+**Error messages:**
+- `BTD6_API_KEY environment variable is not set!` → Add the key to `.env`
+- `Invalid API key!` → Key is revoked or incorrect
+- `API validation request timed out` → Network issue or API is down
+
 ### Bot not responding to commands
 
 1. Check that commands are registered: Look for "Successfully registered all commands" in logs
@@ -367,6 +412,14 @@ docker-compose logs -f bot
 docker-compose down
 ```
 
+## Contact & Support
+
+For questions, support, API key requests, or licensing inquiries, contact EpildevConnect:
+
+- **Discord**: `epildev`
+- **Email**: `connectwithme@epildevconnect.uk`
+- **GitHub**: [@BlakeMcBride1625](https://github.com/BlakeMcBride1625)
+
 ## Credits
 
 Made by:
@@ -375,4 +428,12 @@ Made by:
 
 ## License
 
-MIT
+**Proprietary - All Rights Reserved**
+
+This software is the exclusive property of Blake McBride. Permission is strictly required for use, modification, or distribution.
+
+**Important:** This software requires a valid API key from the EpildevConnect API to function. See LICENSE file for full terms and conditions.
+
+For licensing inquiries, see the [Contact & Support](#contact--support) section above.
+
+See [LICENSE](LICENSE) file for complete license terms.

@@ -17,6 +17,17 @@ To request permission, contact:
   - GitHub: blakemcbride1625
   - Discord: epildev
 
+API KEY REQUIREMENT
+
+This software requires a valid API key from the EpildevConnect API service
+(https://api.epildevconnect.uk) to function. The software will not start or
+operate without a valid API key. API keys are managed through the EpildevConnect
+API management system and are subject to the terms of service of that system.
+
+Unauthorized use, distribution, or operation of this software without a valid
+API key is prohibited. The software includes validation mechanisms that
+prevent operation without proper authorization.
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
