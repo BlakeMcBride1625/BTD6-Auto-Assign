@@ -63,13 +63,21 @@ A Discord bot that automatically manages roles based on Bloons TD 6 (BTD6) achie
 
 ### API Key Validation
 
-The bot performs API key validation on startup:
+The bot performs API key validation at multiple levels:
+
+**Startup Validation:**
 - ✅ **Valid key**: Bot starts normally
 - ❌ **Missing key**: Bot exits with error message
 - ❌ **Invalid key**: Bot exits with error message
 - ❌ **API unreachable**: Bot exits after timeout (10 seconds)
 
-**The bot will not function without a valid API key.** This is a security requirement to ensure only authorised instances can run.
+**Runtime Validation:**
+- All commands check API validity before executing
+- Scheduled syncs are cancelled if the API key becomes invalid
+- Role evaluation returns no changes if the API key is invalid
+- Users receive a clear error message if the API is unavailable
+
+**The bot will not function without a valid API key.** This is a security requirement to ensure only authorised instances can run. The bot continuously validates the API key throughout its operation, not just at startup.
 
 ## Quick Start
 
@@ -348,6 +356,7 @@ All logs are sent as rich embeds with timestamps and appropriate colours (blue f
 - `BTD6_API_KEY environment variable is not set!` → Add the key to `.env`
 - `Invalid API key!` → Key is revoked or incorrect
 - `API validation request timed out` → Network issue or API is down
+- `Service Unavailable - The bot is currently unavailable due to API validation issues` → API key became invalid during runtime (commands will fail until key is fixed)
 
 ### Bot not responding to commands
 
