@@ -21,6 +21,7 @@ import type { NKPlayerResponse } from "../nk/types.js";
 import { getContentLimits } from "../utils/contentChecker.js";
 import { isAccountFlagged } from "../utils/flagDetection.js";
 import { checkApiKeyValid } from "../utils/apiValidation.js";
+import { getAwardedRoles } from "../utils/roleManager.js";
 
 export interface RoleDiff {
 	rolesToAdd: string[];
@@ -99,8 +100,9 @@ export async function evaluateUserRoles(
 	// Evaluate roles
 	const roleResults = evaluateAllRoles(playerData);
 
-	// Get current roles from Discord (we'll need to fetch from guild)
-	// For now, we'll determine what should be added/removed based on requirements
+	// Get roles that have already been awarded to this user via OAK
+	const awardedRoles = await getAwardedRoles(discordId);
+
 	const rolesToAdd: string[] = [];
 	const rolesToRemove: string[] = [];
 
@@ -114,12 +116,13 @@ export async function evaluateUserRoles(
 		allAchievements: config.discord.roles.allAchievements,
 	};
 
+	// Only add roles that user qualifies for but doesn't already have tracked
+	// Never remove roles if user still has OAKs (even if they no longer qualify)
+	// Role removal is handled separately via clearAwardedRoles() when user has no OAKs
 	for (const [key, roleId] of Object.entries(roleMapping)) {
 		const shouldHave = roleResults[key as keyof typeof roleResults];
-		if (shouldHave) {
+		if (shouldHave && !awardedRoles.includes(roleId)) {
 			rolesToAdd.push(roleId);
-		} else {
-			rolesToRemove.push(roleId);
 		}
 	}
 

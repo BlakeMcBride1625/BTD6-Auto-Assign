@@ -13,14 +13,16 @@
  *   - Discord: epildev
  */
 
-import { Client, Collection, GatewayIntentBits, REST, Routes } from "discord.js";
+import { Client, Collection, GatewayIntentBits, REST, Routes, StringSelectMenuInteraction, GuildMember } from "discord.js";
 import config from "./config/config.js";
 import { getPrismaClient, disconnectPrisma } from "./database/client.js";
 import { setDiscordClient, logger } from "./utils/logger.js";
 import { startScheduledSync, stopScheduledSync } from "./utils/scheduler.js";
+import { startEventPolling, stopEventPolling } from "./utils/eventPoller.js";
 import { sendDMWithAutoDelete } from "./utils/dmManager.js";
 import { createErrorEmbed } from "./utils/embeds.js";
 import { validateApiKey } from "./utils/apiValidation.js";
+import { clearAwardedRoles } from "./utils/roleManager.js";
 import { readdirSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -111,6 +113,9 @@ async function initialize(): Promise<void> {
 		// Start scheduled sync
 		startScheduledSync(client);
 
+		// Start event polling
+		startEventPolling(client);
+
 		logger.info("Bot initialized successfully", false);
 	} catch (error) {
 		logger.error("Error initializing bot:", false, error);
@@ -120,6 +125,40 @@ async function initialize(): Promise<void> {
 
 // Handle interactions
 client.on("interactionCreate", async (interaction) => {
+	// Handle select menu interactions (for register-events dropdown)
+	if (interaction.isStringSelectMenu()) {
+		const selectInteraction = interaction as StringSelectMenuInteraction;
+		
+		// Check if this is a register-events select menu
+		if (selectInteraction.customId.startsWith("register-events-")) {
+			try {
+				// Extract target user ID from custom ID
+				const targetUserId = selectInteraction.customId.replace("register-events-", "");
+				const eventType = selectInteraction.values[0];
+				
+				// Import and call the handler
+				const registerEventsCommand = await import("./commands/staff/register-events.js");
+				if (registerEventsCommand.handleSelectMenu) {
+					await registerEventsCommand.handleSelectMenu(selectInteraction, targetUserId, eventType);
+				}
+			} catch (error) {
+				logger.error("Error handling register-events select menu:", false, error);
+				if (!selectInteraction.replied && !selectInteraction.deferred) {
+					await selectInteraction.reply({
+						content: "There was an error processing your selection!",
+						ephemeral: true,
+					});
+				} else {
+					await selectInteraction.update({
+						content: "There was an error processing your selection!",
+						components: [],
+					});
+				}
+			}
+		}
+		return;
+	}
+
 	if (!interaction.isChatInputCommand()) {
 		return;
 	}
@@ -204,6 +243,39 @@ client.once("ready", () => {
 	logger.info(`Bot is ready! Logged in as ${client.user?.tag}`, false);
 });
 
+// Handle guild member leave
+client.on("guildMemberRemove", async (member: GuildMember) => {
+	try {
+		// Only process if it's the configured guild
+		if (member.guild.id !== config.discord.guildId) {
+			return;
+		}
+
+		const prisma = getPrismaClient();
+		
+		// Check if user has linked OAKs
+		const nkAccounts = await prisma.nk_accounts.findMany({
+			where: { discord_id: member.id },
+		});
+
+		// If user has OAKs, clean up their awarded roles from database
+		// Note: We can't remove Discord roles since the member has already left
+		if (nkAccounts.length > 0) {
+			// Clear awarded roles from database (can't remove Discord roles since member left)
+			const clearedRoleIds = await clearAwardedRoles(member.guild, member.id);
+			
+			if (clearedRoleIds.length > 0) {
+				logger.info(
+					`🐵 User ${member.user.tag} (${member.id}) left the server with ${nkAccounts.length} linked OAK(s). Cleaned up ${clearedRoleIds.length} tracked role(s) from database.`,
+					false
+				);
+			}
+		}
+	} catch (error) {
+		logger.error(`🐵 Error handling guild member remove for ${member.id} - the monkeys are having trouble!`, false, error);
+	}
+});
+
 // Handle errors
 client.on("error", (error) => {
 	logger.error("Discord client error:", false, error);
@@ -223,6 +295,7 @@ async function shutdown(): Promise<void> {
 	logger.info("Shutting down bot...", false);
 
 	stopScheduledSync();
+	stopEventPolling();
 	const { cleanupScheduledDeletions } = await import("./utils/dmManager.js");
 	cleanupScheduledDeletions();
 	await disconnectPrisma();

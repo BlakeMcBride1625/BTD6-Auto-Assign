@@ -23,7 +23,7 @@ import { hasStaffAccess } from "../../utils/permissions.js";
 import { validateOAK, sanitizeOAK } from "../../utils/validation.js";
 import { createSuccessEmbed, createErrorEmbed } from "../../utils/embeds.js";
 import { logger } from "../../utils/logger.js";
-import { applyRoleChanges } from "../../utils/roleManager.js";
+import { applyRoleChanges, clearAwardedRoles } from "../../utils/roleManager.js";
 import { checkApiKeyValid } from "../../utils/apiValidation.js";
 import config from "../../config/config.js";
 
@@ -95,13 +95,16 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 				where: { discord_id: targetUser.id },
 			});
 
+			// Clear all awarded roles (user has no OAKs now)
+			const clearedRoleIds = await clearAwardedRoles(interaction.guild!, targetUser.id);
+
 			// Recalculate roles (skip automatic DM, staff commands don't send DMs to users)
 			const roleDiff = await evaluateUserRoles(targetUser.id, false);
 			await applyRoleChanges(interaction.guild!, targetUser.id, roleDiff, true);
 
 			// Get role names for embed
 			const roleNames: string[] = [];
-			for (const roleId of roleDiff.rolesToRemove) {
+			for (const roleId of clearedRoleIds) {
 				try {
 					const role = await interaction.guild!.roles.fetch(roleId);
 					if (role) roleNames.push(role.name);
@@ -115,7 +118,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 				`All ${allAccounts.length} account(s) have been force-removed from ${targetUser.tag}.`,
 			);
 
-			if (roleDiff.rolesToRemove.length > 0) {
+			if (roleNames.length > 0) {
 				embed.addFields({
 					name: "Roles Removed",
 					value: roleNames.map(name => `• ${name}`).join("\n") || "None",
@@ -166,27 +169,40 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			where: { id: account.id },
 		});
 
-		// Recalculate roles (skip automatic DM, staff commands don't send DMs to users)
-		const roleDiff = await evaluateUserRoles(targetUser.id, false);
-		await applyRoleChanges(interaction.guild!, targetUser.id, roleDiff, true);
+		// Check if user has any remaining OAKs
+		const remainingAccounts = await prisma.nk_accounts.findMany({
+			where: { discord_id: targetUser.id },
+		});
 
 		// Get role names for embed
 		const roleNames: string[] = [];
-		for (const roleId of roleDiff.rolesToRemove) {
-			try {
-				const role = await interaction.guild!.roles.fetch(roleId);
-				if (role) roleNames.push(role.name);
-			} catch {
-				roleNames.push("Unknown Role");
+		let clearedRoleIds: string[] = [];
+
+		// If no remaining OAKs, remove all tracked roles
+		if (remainingAccounts.length === 0) {
+			clearedRoleIds = await clearAwardedRoles(interaction.guild!, targetUser.id);
+			
+			// Get role names for cleared roles
+			for (const roleId of clearedRoleIds) {
+				try {
+					const role = await interaction.guild!.roles.fetch(roleId);
+					if (role) roleNames.push(role.name);
+				} catch {
+					roleNames.push("Unknown Role");
+				}
 			}
 		}
+
+		// Recalculate roles (skip automatic DM, staff commands don't send DMs to users)
+		const roleDiff = await evaluateUserRoles(targetUser.id, false);
+		await applyRoleChanges(interaction.guild!, targetUser.id, roleDiff, true);
 
 		const embed = createSuccessEmbed(
 			"Account Force Removed",
 			`Account has been force-removed from ${targetUser.tag}.`,
 		);
 
-		if (roleDiff.rolesToRemove.length > 0) {
+		if (roleNames.length > 0) {
 			embed.addFields({
 				name: "Roles Removed",
 				value: roleNames.map(name => `• ${name}`).join("\n") || "None",

@@ -24,7 +24,7 @@ import {
 	createSuccessEmbed,
 	createErrorEmbed,
 } from "../../utils/embeds.js";
-import { applyRoleChanges } from "../../utils/roleManager.js";
+import { applyRoleChanges, clearAwardedRoles } from "../../utils/roleManager.js";
 import { logger } from "../../utils/logger.js";
 import { sendDMWithAutoDelete } from "../../utils/dmManager.js";
 import { checkApiKeyValid } from "../../utils/apiValidation.js";
@@ -98,31 +98,41 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			where: { id: account.id },
 		});
 
-		// Recalculate roles (skip automatic DM, we'll send combined one)
-		const roleDiff = await evaluateUserRoles(discordId, false);
-		await applyRoleChanges(interaction.guild!, discordId, roleDiff, true);
-
-		// Get remaining linked accounts for the embed
+		// Check if user has any remaining OAKs
 		const remainingAccounts = await prisma.nk_accounts.findMany({
 			where: { discord_id: discordId },
-			select: { nk_id: true },
 		});
-		const remainingOaks = remainingAccounts.map((acc) => acc.nk_id);
 
 		// Get role names and mentions for embed and logging
 		const roleNames: string[] = [];
 		const roleMentions: string[] = [];
-		for (const roleId of roleDiff.rolesToRemove) {
-			try {
-				const role = await interaction.guild!.roles.fetch(roleId);
-				if (role) {
-					roleNames.push(role.name);
-					roleMentions.push(`<@&${roleId}>`);
+		let clearedRoleIds: string[] = [];
+
+		// If no remaining OAKs, remove all tracked roles
+		if (remainingAccounts.length === 0) {
+			clearedRoleIds = await clearAwardedRoles(interaction.guild!, discordId);
+			
+			// Get role names for cleared roles
+			for (const roleId of clearedRoleIds) {
+				try {
+					const role = await interaction.guild!.roles.fetch(roleId);
+					if (role) {
+						roleNames.push(role.name);
+						roleMentions.push(`<@&${roleId}>`);
+					}
+				} catch {
+					roleNames.push("Unknown Role");
 				}
-			} catch {
-				roleNames.push("Unknown Role");
 			}
 		}
+
+		// Recalculate roles (skip automatic DM, we'll send combined one)
+		// This will only add new roles if user still has OAKs, or return empty if no OAKs
+		const roleDiff = await evaluateUserRoles(discordId, false);
+		await applyRoleChanges(interaction.guild!, discordId, roleDiff, true);
+
+		// Get remaining linked accounts for the embed
+		const remainingOaks = remainingAccounts.map((acc) => acc.nk_id);
 
 		// Create combined embed
 		const embed = createSuccessEmbed(
@@ -144,7 +154,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			});
 		}
 
-		if (roleDiff.rolesToRemove.length > 0) {
+		if (roleNames.length > 0) {
 			embed.addFields({
 				name: "❌ Roles Removed",
 				value: roleNames.map(name => `• ${name}`).join("\n") || "None",
