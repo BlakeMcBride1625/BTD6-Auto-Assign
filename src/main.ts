@@ -13,7 +13,7 @@
  *   - Discord: epildev
  */
 
-import { Client, Collection, GatewayIntentBits, REST, Routes, StringSelectMenuInteraction, GuildMember } from "discord.js";
+import { Client, Collection, GatewayIntentBits, REST, Routes, StringSelectMenuInteraction, GuildMember, PartialGuildMember } from "discord.js";
 import config from "./config/config.js";
 import { getPrismaClient, disconnectPrisma } from "./database/client.js";
 import { setDiscordClient, logger } from "./utils/logger.js";
@@ -244,7 +244,7 @@ client.once("ready", () => {
 });
 
 // Handle guild member leave
-client.on("guildMemberRemove", async (member: GuildMember) => {
+client.on("guildMemberRemove", async (member: GuildMember | PartialGuildMember) => {
 	try {
 		// Only process if it's the configured guild
 		if (member.guild.id !== config.discord.guildId) {
@@ -264,9 +264,12 @@ client.on("guildMemberRemove", async (member: GuildMember) => {
 			// Clear awarded roles from database (can't remove Discord roles since member left)
 			const clearedRoleIds = await clearAwardedRoles(member.guild, member.id);
 			
+			// Get user tag if available (may not be available in PartialGuildMember)
+			const userTag = member.user?.tag || member.id;
+			
 			if (clearedRoleIds.length > 0) {
 				logger.info(
-					`🐵 User ${member.user.tag} (${member.id}) left the server with ${nkAccounts.length} linked OAK(s). Cleaned up ${clearedRoleIds.length} tracked role(s) from database.`,
+					`🐵 User ${userTag} (${member.id}) left the server with ${nkAccounts.length} linked OAK(s). Cleaned up ${clearedRoleIds.length} tracked role(s) from database.`,
 					false
 				);
 			}
