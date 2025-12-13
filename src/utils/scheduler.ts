@@ -133,6 +133,22 @@ async function runSync(client: Client, silent = false): Promise<void> {
 			}
 
 			try {
+				// Check if user is still in the guild before processing
+				let member;
+				try {
+					member = await guild.members.fetch(user.discord_id);
+				} catch (error: any) {
+					// User has left the server (Unknown Member error)
+					if (error?.code === 10007 || error?.rawError?.code === 10007) {
+						// applyRoleChanges will handle cleanup, but we can skip processing here
+						// to avoid unnecessary API calls
+						processed++;
+						continue;
+					}
+					// Re-throw other errors
+					throw error;
+				}
+
 				// Check for flagged accounts before role evaluation
 				let hasFlaggedAccount = false;
 				let flaggedAccountId: string | null = null;
@@ -148,7 +164,6 @@ async function runSync(client: Client, silent = false): Promise<void> {
 				// If account is flagged, assign flagged role and skip normal role evaluation
 				if (hasFlaggedAccount && config.discord.flaggedModdedPlayer) {
 					try {
-						const member = await guild.members.fetch(user.discord_id);
 						const flaggedRole = await guild.roles.fetch(config.discord.flaggedModdedPlayer);
 						if (flaggedRole && !member.roles.cache.has(config.discord.flaggedModdedPlayer)) {
 							await member.roles.add(flaggedRole);
@@ -165,15 +180,7 @@ async function runSync(client: Client, silent = false): Promise<void> {
 				}
 
 				const roleDiff = await evaluateUserRoles(user.discord_id, false);
-				
-				// Get member to get username for logging
-				let username = user.discord_id;
-				try {
-					const member = await guild.members.fetch(user.discord_id);
-					username = member.user.tag;
-				} catch {
-					// If we can't fetch member, use ID
-				}
+				const username = member.user.tag;
 
 				await applyRoleChanges(guild, user.discord_id, roleDiff, false, silent);
 
@@ -200,7 +207,14 @@ async function runSync(client: Client, silent = false): Promise<void> {
 				}
 
 				processed++;
-			} catch (error) {
+			} catch (error: any) {
+				// Check if it's an "Unknown Member" error - if so, applyRoleChanges already handled it
+				if (error?.code === 10007 || error?.rawError?.code === 10007) {
+					// User left server - already handled by applyRoleChanges, don't count as error
+					processed++;
+					continue;
+				}
+				
 				errors++;
 				// Try to get username for error logging
 				let username = user.discord_id;

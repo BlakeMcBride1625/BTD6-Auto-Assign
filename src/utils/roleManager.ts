@@ -133,7 +133,32 @@ export async function applyRoleChanges(
 	silent = false,
 ): Promise<void> {
 	try {
-		const member = await guild.members.fetch(discordId);
+		let member;
+		try {
+			member = await guild.members.fetch(discordId);
+		} catch (error: any) {
+			// Handle "Unknown Member" error (user left the server)
+			if (error?.code === 10007 || error?.rawError?.code === 10007) {
+				// User has left the server - clean up their OAKs and tracked roles
+				const prisma = getPrismaClient();
+				const nkAccounts = await prisma.nk_accounts.findMany({
+					where: { discord_id: discordId },
+				});
+
+				if (nkAccounts.length > 0) {
+					// User has OAKs but left server - clean up
+					await clearAwardedRoles(guild, discordId);
+					if (!silent) {
+						logger.info(`🐵 User ${discordId} left the server with ${nkAccounts.length} linked OAK(s). Cleaned up tracked roles.`, false);
+					}
+				}
+				// Silently return - don't log as error since this is expected behavior
+				return;
+			}
+			// Re-throw other errors
+			throw error;
+		}
+
 		if (!member) {
 			logger.warn(`🐵 Member ${discordId} not found in guild - even the monkeys can't find them!`);
 			return;
